@@ -1,13 +1,28 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+import json
 
-# Initialize Firebase only once
-if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
+def init_firebase():
+    if firebase_admin._apps:
+        return firestore.client()
+
+    # Production: service account loaded from environment variable
+    service_account_env = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+
+    if service_account_env:
+        service_account_dict = json.loads(service_account_env)
+        cred = credentials.Certificate(service_account_dict)
+    else:
+        # Local development: load from file
+        cred = credentials.Certificate("serviceAccountKey.json")
+
     firebase_admin.initialize_app(cred)
+    return firestore.client()
 
-db = firestore.client()
+
+# Initialize on import
+db = init_firebase()
 
 
 def get_document(collection: str, doc_id: str):

@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from services.firebase_service import get_document
+from routes import onboarding, quiz, adaptive, chat, progress, lesson
 
 app = FastAPI(title="Adaptive Tutor API", version="1.0.0")
 
-# Allow FlutterFlow to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,12 +12,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register all route modules
+app.include_router(onboarding.router, prefix="/onboarding", tags=["Onboarding"])
+app.include_router(quiz.router,       prefix="/quiz",       tags=["Quiz"])
+app.include_router(adaptive.router,   prefix="/adaptive",   tags=["Adaptive"])
+app.include_router(chat.router,       prefix="/chat",       tags=["Chat"])
+app.include_router(progress.router,   prefix="/progress",   tags=["Progress"])
+app.include_router(lesson.router,     prefix="/lesson",     tags=["Lesson"])
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": "1.0.0"}
-
-@app.get("/test-firebase")
-def test_firebase():
-    # This will try to read from your users collection
-    result = get_document("users", "testUserId")
-    return {"firebase_connected": True, "test_result": result}
