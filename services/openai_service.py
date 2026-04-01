@@ -136,37 +136,106 @@ AFTER FAILING a quiz:
 All your generated lessons and quizzes are saved and accessible only by you.
 No two students will have exactly the same learning experience.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 AVAILABLE COURSES AND TOPICS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The system currently supports Computer Science courses at Adeleke University.
+The system currently supports two Computer Science courses at Adeleke University.
+Any student can enroll in either course regardless of faculty, department or year.
 
 COMPUTER PROGRAMMING I (COS201):
-  Topic 1: Java Data Types & Variables
+
+  Topic 1: Introduction to Programming
+    - Essentials of Computer Programming
+    - Types of Programming (Functional, Declarative, Logic, OOP)
+    - Scripting Languages
+    - Structured Programming Principles
+
+  Topic 2: Java Data Types, Variables & Operators
     - Java Data Types Overview
     - Primitive Data Types
     - Non-Primitive Data Types
-    - Variables Overview
-    - Types of Variables
+    - Variables and Declarations
+    - Expressions, Assignment Statements and Operators
 
-  Topic 2: Object-Oriented Programming (OOP) Concepts
-    - Introduction to Objects
-    - Classes
-    - The Four Pillars of OOP (Encapsulation, Inheritance, Polymorphism, Abstraction)
-    - Access Modifiers
-    - Java Applications (Applets, Applications, Servlets)
+  Topic 3: Control Structures & Arrays
+    - Simple Input and Output
+    - Control Structures (if/else, switch)
+    - Loops (for, while, do-while)
+    - Arrays
 
-  Topic 3: Java Packages
+  Topic 4: Object-Oriented Programming Concepts
+    - Introduction to Objects and Classes
+    - The Four Pillars of OOP
+    - Methods and Parameter Passing
+    - Access Modifiers and Encapsulation
+    - Java Applications
+
+  Topic 5: Class Hierarchies & Packages
+    - Inheritance
+    - Polymorphism
     - Package Fundamentals
     - Types of Packages
     - Accessing Packages
 
-  Topic 4: Exception Handling
+  Topic 6: Strings & String Processing
+    - Introduction to Strings
+    - String Methods and Operations
+    - String Processing Techniques
+    - Common String Algorithms
+
+  Topic 7: APIs, Collections, Searching & Sorting
+    - Use of API and Iterators
+    - List, Stack and Queue
+    - Searching Algorithms
+    - Sorting Algorithms
+
+  Topic 8: Recursion & Exception Handling
+    - Introduction to Recursion
+    - Simple Recursive Algorithms
     - Introduction to Exceptions
-    - Exception Hierarchy
-    - Types of Exceptions
-    - Handling Mechanisms (try, catch, finally, throw, throws)
+    - Exception Hierarchy and Types
+    - Exception Handling Mechanisms (try, catch, finally, throw, throws)
+
+DATA STRUCTURES (CSC301):
+
+  Topic 1: Introduction to Data Structures & Primitive Types
+    - What are Data Structures and Why They Matter
+    - Primitive Types in C++
+    - Arrays in C++
+    - Records and Structs in C++
+
+  Topic 2: Strings & String Processing
+    - Introduction to Strings in C++
+    - String Operations and Methods
+    - String Processing Techniques
+    - String Algorithms
+
+  Topic 3: Memory, Stacks & Queues
+    - Data Representation in Memory
+    - Stack and Heap Allocation
+    - Stack Data Structure
+    - Queue Data Structure
+    - Implementation Strategies for Stacks and Queues
+
+  Topic 4: Trees
+    - Introduction to Trees
+    - Binary Trees and Binary Search Trees
+    - Tree Traversal (in-order, pre-order, post-order)
+    - Implementation Strategies for Trees
+
+  Topic 5: Pointers, References & Linked Structures
+    - Pointers in C++
+    - References in C++
+    - Run-time Storage Management
+    - Linked Lists
+    - Linked List Operations
+
+  Topic 6: Algorithms — Searching & Sorting
+    - Searching Algorithms
+    - Bubble Sort
+    - Selection Sort and Insertion Sort
+    - Algorithm Analysis and Complexity
 
 More courses will be added as the system expands.
 

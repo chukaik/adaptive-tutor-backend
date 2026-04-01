@@ -12,91 +12,69 @@ load_dotenv()
 SERVICE_ACCOUNT_PATH = "serviceAccountKey.json"
 OPENAI_API_KEY       = os.getenv("OPENAI_API_KEY")
 
-COURSE_ID = "TEbLVrd24pWd27qXnbnC"
+COURSE_ID = "QhVX2kifeGLeN9Q1uJA7"
 
 TOPICS = [
     {
-        "topic_id":  "QvOXUoFCsObq84lvQ3f3",
-        "title":     "Introduction to Programming",
+        "topic_id":  "ycGFsUGZvO1XLCoCCQzg",
+        "title":     "Introduction to Data Structures & Primitive Types",
         "subtopics": [
-            "Essentials of Computer Programming",
-            "Types of Programming",
-            "Scripting Languages",
-            "Structured Programming Principles",
+            "What are Data Structures and Why They Matter",
+            "Primitive Types in C++",
+            "Arrays in C++",
+            "Records and Structs in C++",
         ]
     },
     {
-        "topic_id":  "oZpKBPkYLmk1uEOHmDg5",
-        "title":     "Java Data Types, Variables & Operators",
-        "subtopics": [
-            "Java Data Types Overview",
-            "Primitive Data Types",
-            "Non-Primitive Data Types",
-            "Variables and Declarations",
-            "Expressions, Assignment Statements and Operators",
-        ]
-    },
-    {
-        "topic_id":  "BnPgNtrLOFML7lXybvpj",
-        "title":     "Control Structures & Arrays",
-        "subtopics": [
-            "Simple Input and Output",
-            "Control Structures",
-            "Loops",
-            "Arrays",
-        ]
-    },
-    {
-        "topic_id":  "pHqDlLAWIaUxNQWCNPHu",
-        "title":     "Object-Oriented Programming Concepts",
-        "subtopics": [
-            "Introduction to Objects and Classes",
-            "The Four Pillars of OOP",
-            "Methods and Parameter Passing",
-            "Access Modifiers and Encapsulation",
-            "Java Applications",
-        ]
-    },
-    {
-        "topic_id":  "Mh9RhNHcpWiqh13jTBNg",
-        "title":     "Class Hierarchies & Packages",
-        "subtopics": [
-            "Inheritance",
-            "Polymorphism",
-            "Package Fundamentals",
-            "Types of Packages",
-            "Accessing Packages",
-        ]
-    },
-    {
-        "topic_id":  "D7UZGjs6FUVGPvS5Wn7G",
+        "topic_id":  "fVsptlyd8jXsSUdMr03V",
         "title":     "Strings & String Processing",
         "subtopics": [
-            "Introduction to Strings",
-            "String Methods and Operations",
+            "Introduction to Strings in C++",
+            "String Operations and Methods",
             "String Processing Techniques",
-            "Common String Algorithms",
+            "String Algorithms",
         ]
     },
     {
-        "topic_id":  "gvDKXtNgXVDn3CbkIur7",
-        "title":     "APIs, Collections, Searching & Sorting",
+        "topic_id":  "eeq1aDo92ViFVa3JkwW3",
+        "title":     "Memory, Stacks & Queues",
         "subtopics": [
-            "Use of API and Iterators",
-            "List, Stack and Queue",
+            "Data Representation in Memory",
+            "Stack and Heap Allocation",
+            "Stack Data Structure",
+            "Queue Data Structure",
+            "Implementation Strategies for Stacks and Queues",
+        ]
+    },
+    {
+        "topic_id":  "sUbDh6txVZz2a4ee7Ggw",
+        "title":     "Trees",
+        "subtopics": [
+            "Introduction to Trees",
+            "Binary Trees and Binary Search Trees",
+            "Tree Traversal",
+            "Implementation Strategies for Trees",
+        ]
+    },
+    {
+        "topic_id":  "BeW7nroHcqe8CuCK4kna",
+        "title":     "Pointers, References & Linked Structures",
+        "subtopics": [
+            "Pointers in C++",
+            "References in C++",
+            "Run-time Storage Management",
+            "Linked Lists",
+            "Linked List Operations",
+        ]
+    },
+    {
+        "topic_id":  "epUQhQBC23aCPc3Vj5ST",
+        "title":     "Algorithms — Searching & Sorting",
+        "subtopics": [
             "Searching Algorithms",
-            "Sorting Algorithms",
-        ]
-    },
-    {
-        "topic_id":  "wwvQhdZUUEBHmZO6Bqnj",
-        "title":     "Recursion & Exception Handling",
-        "subtopics": [
-            "Introduction to Recursion",
-            "Simple Recursive Algorithms",
-            "Introduction to Exceptions",
-            "Exception Hierarchy and Types",
-            "Exception Handling Mechanisms",
+            "Bubble Sort",
+            "Selection Sort and Insertion Sort",
+            "Algorithm Analysis and Complexity",
         ]
     },
 ]
@@ -132,41 +110,48 @@ def fetch_curriculum_guide(db, topic_id):
 
 def generate_questions(client, topic_title, subtopics, difficulty, curriculum_context, count):
     subtopic_list = "\n".join(f"- {s}" for s in subtopics)
-    difficulty_guidance = (
-        "Focus on basic recall, definitions, and simple identification. "
-        "For programming topics, include simple code reading questions."
-        if difficulty == "easy"
-        else
-        "Focus on application, code analysis, tracing outputs, and deeper understanding. "
-        "Include questions with short Java code snippets where students must "
-        "determine the output or identify errors."
-    )
 
-    prompt = f"""You are a Java programming lecturer creating exam questions for
-undergraduate Computer Science students at Adeleke University studying COS201.
+    if difficulty == "easy":
+        difficulty_guidance = """Focus on basic recall, definitions, and conceptual understanding.
+Include simple C++ syntax questions and straightforward concept identification.
+Mix: 10 multiple choice, 5 typed (short answer or simple code writing)."""
+    else:
+        difficulty_guidance = """Focus on application, algorithm tracing, code analysis and writing.
+Include:
+- Questions with C++ code snippets where students trace output or find errors
+- Lab-style typed questions where students write C++ functions or implement algorithms
+- Algorithm complexity analysis questions
+- Questions requiring students to compare implementations
+Mix: 8 multiple choice, 7 typed (code writing and algorithm tracing)."""
 
-COURSE TOPIC: {topic_title}
+    prompt = f"""You are a Data Structures lecturer creating exam questions for
+undergraduate Computer Science students studying CSC301 at a Nigerian university.
+The course uses C++ as its programming language.
+
+TOPIC: {topic_title}
 DIFFICULTY: {difficulty.upper()}
 SUBTOPICS TO COVER:
 {subtopic_list}
 
-CURRICULUM REFERENCE (base your questions strictly on this content):
+CURRICULUM REFERENCE:
 {curriculum_context}
 
-DIFFICULTY GUIDANCE:
+INSTRUCTIONS:
 {difficulty_guidance}
 
-TASK:
-Generate exactly {count} questions about the topic above.
-- Mix of question types: roughly 10 multiple choice and 5 typed (short answer)
-- For multiple choice: provide exactly 4 options labeled A, B, C, D
-- For typed: no options needed, just question and correct answer
-- Every subtopic must have at least 1 question
-- Questions must be clearly worded and directly relevant to Java programming
-- Explanations must be educational and reference the correct Java concept
+IMPORTANT FOR TYPED QUESTIONS:
+- For lab-style typed questions, ask students to write actual C++ code
+- Example: "Write a C++ function to push an element onto a stack implemented using an array"
+- The correct_answer should contain a model C++ solution or clear algorithm steps
+- Explanations should explain why the solution works
 
-Respond ONLY with a valid JSON array. No preamble, no markdown, no extra text.
-Use exactly this structure:
+IMPORTANT FOR ALL QUESTIONS:
+- Every subtopic must have at least 1 question
+- Questions must be clearly worded and relevant to C++ and Data Structures
+- Use correct C++ syntax in all code examples
+- Explanations must be thorough and educational
+
+Respond ONLY with a valid JSON array. No preamble, no markdown.
 
 [
   {{
@@ -191,7 +176,7 @@ Use exactly this structure:
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
-        max_tokens=4000,
+        max_tokens=5000,
     )
 
     raw = response.choices[0].message.content.strip()
@@ -239,28 +224,33 @@ def save_questions_to_firestore(db, questions, topic_id, course_id, difficulty):
 
 
 if __name__ == "__main__":
+    if COURSE_ID == "FILL_IN_AFTER_RUNNING_ADD_CSC301" or not TOPICS:
+        print("❌ Please fill in COURSE_ID and TOPICS before running this script.")
+        print("   Run python seed/add_csc301.py first to get the IDs.")
+        sys.exit(1)
+
     db     = init_firebase()
     client = init_openai()
 
     total_saved  = 0
     difficulties = ["easy", "hard"]
 
-    print("\n🌱 QUESTION BANK SEEDING — Computer Programming I (COS201)")
+    print("\n🌱 QUESTION BANK SEEDING — Data Structures (CSC301)")
     print("="*60)
-    print(f"Topics to seed: {len(TOPICS)}")
+    print(f"Topics: {len(TOPICS)}")
     print(f"Questions per difficulty: {QUESTIONS_PER_DIFFICULTY}")
-    print(f"Total target: {len(TOPICS) * 2 * QUESTIONS_PER_DIFFICULTY} questions")
+    print(f"Target: {len(TOPICS) * 2 * QUESTIONS_PER_DIFFICULTY} questions")
     print("="*60)
 
     for topic in TOPICS:
         topic_id    = topic["topic_id"]
         topic_title = topic["title"]
 
-        print(f"\n📚 Topic: {topic_title}")
+        print(f"\n📚 {topic_title}")
 
         curriculum_context = fetch_curriculum_guide(db, topic_id)
         if not curriculum_context:
-            print(f"   ⚠️  No curriculum guide found — skipping")
+            print(f"   ⚠️  No curriculum guide — skipping")
             continue
 
         for difficulty in difficulties:
@@ -278,32 +268,30 @@ if __name__ == "__main__":
 
                 print(f"   ✅ Generated {len(questions)} questions")
 
+                mc_count = sum(1 for q in questions if q.get("question_type") == "multiple_choice")
+                t_count  = sum(1 for q in questions if q.get("question_type") == "typed")
+                print(f"   📊 Mix: {mc_count} multiple choice, {t_count} typed")
+
                 if questions:
                     first = questions[0]
                     print(f"   📝 Sample: [{first['question_type'].upper()}] "
-                          f"{first['question_text'][:75]}...")
+                          f"{first['question_text'][:70]}...")
 
                 saved = save_questions_to_firestore(
                     db, questions, topic_id, COURSE_ID, difficulty
                 )
                 total_saved += saved
-                print(f"   💾 Saved {saved} questions to Firestore")
+                print(f"   💾 Saved {saved} questions")
 
-                # Pause between API calls
                 time.sleep(2)
 
             except json.JSONDecodeError as e:
-                print(f"   ❌ JSON parse error for {topic_title} {difficulty}: {e}")
+                print(f"   ❌ JSON error: {e}")
                 continue
             except Exception as e:
-                print(f"   ❌ Error for {topic_title} {difficulty}: {e}")
+                print(f"   ❌ Error: {e}")
                 continue
 
     print("\n" + "="*60)
     print(f"✅ SEEDING COMPLETE — {total_saved} total questions saved")
     print("="*60)
-    print("\n📌 Next steps:")
-    print("   1. Review questions in Firebase Console → question_bank")
-    print("   2. Delete any duplicate or low quality questions")
-    print("   3. Update src/constants/courseIds.js with new IDs")
-    print("   4. Push backend changes to GitHub")
