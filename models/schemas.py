@@ -155,11 +155,13 @@ class ChatRequest(BaseModel):
     message:       str
     topic_context: Optional[str] = None
     history:       List[ChatMessage] = []
+    session_id:    Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     response:   str
     message_id: str
+    session_id:    Optional[str] = None
 
 
 # PROGRESS
