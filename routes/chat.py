@@ -49,23 +49,32 @@ def get_or_create_session(user_id: str, session_id: str = None):
         return new_session_ref.id
 
 
-def update_session_metadata(user_id: str, session_id: str, 
-                             first_message: str, message_count: int):
-    """Update session title from first user message and increment count."""
-    # Use first 40 chars of first message as session title
-    title = first_message[:40] + ("..." if len(first_message) > 40 else "")
-    
+def update_session_metadata(
+    user_id: str,
+    session_id: str,
+    first_message: str | None,
+    message_count: int
+):
     session_ref = (
         db.collection("chat_history")
         .document(user_id)
         .collection("sessions")
         .document(session_id)
     )
-    session_ref.update({
-        "title":           title,
+
+    update_data = {
         "last_message_at": firestore.SERVER_TIMESTAMP,
         "message_count":   message_count,
-    })
+    }
+
+    # Only set title from the very first message
+    if first_message is not None:
+        title = first_message[:40] + (
+            "..." if len(first_message) > 40 else ""
+        )
+        update_data["title"] = title
+
+    session_ref.update(update_data)
 
 
 # ─── POST /chat/message ───────────────────────────────────────────────────────
@@ -118,11 +127,12 @@ def send_message(req: ChatRequest):
         "timestamp":     firestore.SERVER_TIMESTAMP,
     })
 
-    # Update session metadata
+    # Only update title from the first message
+    # existing_count is 0 before any messages are saved, so first message = count of 0
     update_session_metadata(
         req.user_id,
         session_id,
-        req.message,
+        req.message if existing_count == 0 else None,
         existing_count + 2,
     )
 
