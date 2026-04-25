@@ -7,3 +7,12 @@ Topic 5 ID → Mh9RhNHcpWiqh13jTBNg  (Class Hierarchies & Packages)
 Topic 6 ID → D7UZGjs6FUVGPvS5Wn7G  (Strings & String Processing)
 Topic 7 ID → gvDKXtNgXVDn3CbkIur7  (APIs, Collections, Searching & Sorting)
 Topic 8 ID → wwvQhdZUUEBHmZO6Bqnj  (Recursion & Exception Handling)
+
+
+Course ID → QhVX2kifeGLeN9Q1uJA7
+Topic 1 ID → ycGFsUGZvO1XLCoCCQzg  (Introduction to Data Structures & Primitive Types)
+Topic 2 ID → fVsptlyd8jXsSUdMr03V  (Strings & String Processing)
+Topic 3 ID → eeq1aDo92ViFVa3JkwW3  (Memory, Stacks & Queues)
+Topic 4 ID → sUbDh6txVZz2a4ee7Ggw  (Trees)
+Topic 5 ID → BeW7nroHcqe8CuCK4kna  (Pointers, References & Linked Structures)
+Topic 6 ID → epUQhQBC23aCPc3Vj5ST  (Algorithms — Searching & Sorting)
