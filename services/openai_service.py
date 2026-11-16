@@ -2,12 +2,13 @@
 OpenAI API calls. Prompt text lives in the prompts package.
 """
 import os
-import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
 from services import llm_settings
 from services.llm_settings import CallSettings
+from services.llm_json import request_json
+from models.llm_replies import GRADING_RESULT, QUIZ_QUESTIONS, LESSON
 
 from prompts import (
     hint_messages,
@@ -31,14 +32,6 @@ def _complete(messages: list, settings: CallSettings) -> str:
         temperature=settings.temperature,
     )
     return response.choices[0].message.content.strip()
-
-
-def _strip_fences(raw: str) -> str:
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return raw.strip()
 
 
 def get_hint(question_text: str, topic: str, difficulty: str) -> str:
@@ -66,11 +59,12 @@ def grade_typed_answer(
     correct_answer: str,
     student_answer: str
 ) -> dict:
-    raw = _complete(
-        grading_messages(question_text, correct_answer, student_answer),
-        llm_settings.GRADING,
+    messages = grading_messages(question_text, correct_answer, student_answer)
+    return request_json(
+        lambda: _complete(messages, llm_settings.GRADING),
+        GRADING_RESULT,
+        what="grading result",
     )
-    return json.loads(_strip_fences(raw))
 
 
 def chat_with_tutor(
@@ -94,13 +88,14 @@ def generate_personalized_questions(
 ) -> list:
     # previous_question_ids is accepted for API compatibility; the prompt
     # does not use it.
-    raw = _complete(
-        personalized_quiz_messages(
-            topic_title, weak_subtopics, difficulty, curriculum_context, count
-        ),
-        llm_settings.QUIZ,
+    messages = personalized_quiz_messages(
+        topic_title, weak_subtopics, difficulty, curriculum_context, count
     )
-    return json.loads(_strip_fences(raw))
+    return request_json(
+        lambda: _complete(messages, llm_settings.QUIZ),
+        QUIZ_QUESTIONS,
+        what="quiz",
+    )
 
 
 def generate_lesson_content(
@@ -114,10 +109,11 @@ def generate_lesson_content(
     Generate deep, elaborated lesson content for a topic.
     If is_remedial=True, regenerate only weak subtopics in simpler language.
     """
-    raw = _complete(
-        lesson_messages(
-            topic_title, subtopics, curriculum_context, is_remedial, weak_subtopics
-        ),
-        llm_settings.LESSON,
+    messages = lesson_messages(
+        topic_title, subtopics, curriculum_context, is_remedial, weak_subtopics
     )
-    return json.loads(_strip_fences(raw))
+    return request_json(
+        lambda: _complete(messages, llm_settings.LESSON),
+        LESSON,
+        what="lesson",
+    )
