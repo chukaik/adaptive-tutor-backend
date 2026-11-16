@@ -6,6 +6,9 @@ import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
+from services import llm_settings
+from services.llm_settings import CallSettings
+
 from prompts import (
     hint_messages,
     explanation_messages,
@@ -20,12 +23,12 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def _complete(messages: list, max_tokens: int, temperature: float) -> str:
+def _complete(messages: list, settings: CallSettings) -> str:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=llm_settings.MODEL,
         messages=messages,
-        max_tokens=max_tokens,
-        temperature=temperature,
+        max_tokens=settings.max_tokens,
+        temperature=settings.temperature,
     )
     return response.choices[0].message.content.strip()
 
@@ -41,8 +44,7 @@ def _strip_fences(raw: str) -> str:
 def get_hint(question_text: str, topic: str, difficulty: str) -> str:
     return _complete(
         hint_messages(question_text, topic, difficulty),
-        max_tokens=150,
-        temperature=0.5,
+        llm_settings.HINT,
     )
 
 
@@ -55,8 +57,7 @@ def get_explanation(
 ) -> str:
     return _complete(
         explanation_messages(question_text, correct_answer, student_answer, is_correct, topic),
-        max_tokens=200,
-        temperature=0.5,
+        llm_settings.EXPLANATION,
     )
 
 
@@ -67,8 +68,7 @@ def grade_typed_answer(
 ) -> dict:
     raw = _complete(
         grading_messages(question_text, correct_answer, student_answer),
-        max_tokens=100,
-        temperature=0.1,
+        llm_settings.GRADING,
     )
     return json.loads(_strip_fences(raw))
 
@@ -80,8 +80,7 @@ def chat_with_tutor(
 ) -> str:
     return _complete(
         chat_messages(message, history, topic_context),
-        max_tokens=500,
-        temperature=0.7,
+        llm_settings.CHAT,
     )
 
 
@@ -99,8 +98,7 @@ def generate_personalized_questions(
         personalized_quiz_messages(
             topic_title, weak_subtopics, difficulty, curriculum_context, count
         ),
-        max_tokens=3000,
-        temperature=0.8,
+        llm_settings.QUIZ,
     )
     return json.loads(_strip_fences(raw))
 
@@ -120,7 +118,6 @@ def generate_lesson_content(
         lesson_messages(
             topic_title, subtopics, curriculum_context, is_remedial, weak_subtopics
         ),
-        max_tokens=6000,
-        temperature=0.6,
+        llm_settings.LESSON,
     )
     return json.loads(_strip_fences(raw))
