@@ -21,11 +21,19 @@ from prompts import (
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Created on first use so that importing this module needs no API key.
+client = None
+
+
+def _get_client() -> OpenAI:
+    global client
+    if client is None:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return client
 
 
 def _complete(messages: list, settings: CallSettings) -> str:
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model=llm_settings.MODEL,
         messages=messages,
         max_tokens=settings.max_tokens,

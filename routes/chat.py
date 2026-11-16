@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import ChatRequest, ChatResponse
 from services.auth import get_current_uid, require_same_user
-from services.firebase_service import get_document
+from services.firebase_service import get_document, get_db
 from services.openai_service import chat_with_tutor
 from firebase_admin import firestore
 import uuid
 from datetime import datetime
 
 router = APIRouter()
-
-db = firestore.client()
 
 
 # ─── Helper: Get or Create Session ───────────────────────────────────────────
@@ -21,7 +19,7 @@ def get_or_create_session(user_id: str, session_id: str = None):
     If no session_id, create a brand new session.
     """
     sessions_ref = (
-        db.collection("chat_history")
+        get_db().collection("chat_history")
         .document(user_id)
         .collection("sessions")
     )
@@ -57,7 +55,7 @@ def update_session_metadata(
     message_count: int
 ):
     session_ref = (
-        db.collection("chat_history")
+        get_db().collection("chat_history")
         .document(user_id)
         .collection("sessions")
         .document(session_id)
@@ -101,7 +99,7 @@ def send_message(req: ChatRequest, uid: str = Depends(get_current_uid)):
 
     # Reference to this session's messages
     messages_ref = (
-        db.collection("chat_history")
+        get_db().collection("chat_history")
         .document(req.user_id)
         .collection("sessions")
         .document(session_id)
@@ -140,7 +138,7 @@ def send_message(req: ChatRequest, uid: str = Depends(get_current_uid)):
 
     # Also save to old flat path for backward compatibility
     old_ref = (
-        db.collection("chat_history")
+        get_db().collection("chat_history")
         .document(req.user_id)
         .collection("messages")
     )
@@ -185,7 +183,7 @@ def get_chat_history(
     if session_id:
         # Fetch messages from specific session
         messages_ref = (
-            db.collection("chat_history")
+            get_db().collection("chat_history")
             .document(user_id)
             .collection("sessions")
             .document(session_id)
@@ -196,7 +194,7 @@ def get_chat_history(
     else:
         # Fallback: fetch from old flat messages path
         messages_ref = (
-            db.collection("chat_history")
+            get_db().collection("chat_history")
             .document(user_id)
             .collection("messages")
             .order_by("timestamp")
@@ -231,7 +229,7 @@ def get_chat_sessions(user_id: str, uid: str = Depends(get_current_uid)):
         raise HTTPException(status_code=404, detail="User not found")
 
     sessions_ref = (
-        db.collection("chat_history")
+        get_db().collection("chat_history")
         .document(user_id)
         .collection("sessions")
         .order_by("last_message_at", direction=firestore.Query.DESCENDING)
