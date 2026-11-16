@@ -13,6 +13,7 @@ from services.openai_service import (
     get_hint, get_explanation, grade_typed_answer,
     generate_personalized_questions
 )
+from prompts import build_curriculum_context
 from services.adaptive_engine import evaluate, compute_score
 from services.auth import get_current_uid, require_same_user
 from firebase_admin import firestore
@@ -24,14 +25,7 @@ router = APIRouter()
 # Fetch curriculum guide context
 
 def fetch_curriculum_context(topic_id: str) -> str:
-    doc = get_document("curriculum_guides", topic_id)
-    if not doc:
-        return ""
-    lines = [f"Topic: {doc.get('topic_title', '')}"]
-    for sub in doc.get("subtopics", []):
-        lines.append(f"\nSubtopic: {sub['title']}")
-        lines.append(sub.get("key_content", ""))
-    return "\n".join(lines)
+    return build_curriculum_context(get_document("curriculum_guides", topic_id))
 
 
 # QUIZ FETCH
