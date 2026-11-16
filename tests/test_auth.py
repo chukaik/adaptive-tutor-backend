@@ -1,34 +1,19 @@
 """
 Tests for the Firebase token dependency and for route protection.
 
-firebase_admin.auth.verify_id_token is replaced with a fake: the token
-"token-alice" belongs to uid "alice"; "token-expired" raises the expiry
-error; anything else is invalid.
+conftest.py replaces firebase_admin.auth.verify_id_token with a fake: the
+token "token-alice" belongs to uid "alice"; "token-expired" raises the
+expiry error; "token-keys-down" raises a key-fetch error; anything not of
+the form "token-<uid>" is invalid.
 """
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
-from firebase_admin import auth
 
 import main
 import routes.progress
 from services.auth import get_current_uid
-
-
-def fake_verify_id_token(token, *args, **kwargs):
-    if token == "token-alice":
-        return {"uid": "alice"}
-    if token == "token-expired":
-        raise auth.ExpiredIdTokenError("Token expired", cause=None)
-    if token == "token-keys-down":
-        raise auth.CertificateFetchError("Could not fetch keys", cause=None)
-    raise auth.InvalidIdTokenError("Invalid token")
-
-
-@pytest.fixture(autouse=True)
-def fake_firebase_auth(monkeypatch):
-    monkeypatch.setattr(auth, "verify_id_token", fake_verify_id_token)
 
 
 def bearer(token):
