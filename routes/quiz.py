@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import (
     QuizFetchRequest, QuizFetchResponse, QuestionOut,
     QuizSubmitRequest, QuizSubmitResponse, QuestionResult,
@@ -14,6 +14,7 @@ from services.openai_service import (
     generate_personalized_questions
 )
 from services.adaptive_engine import evaluate, compute_score
+from services.auth import get_current_uid, require_same_user
 from firebase_admin import firestore
 import random
 
@@ -36,7 +37,8 @@ def fetch_curriculum_context(topic_id: str) -> str:
 # QUIZ FETCH
 
 @router.post("/fetch", response_model=QuizFetchResponse)
-def fetch_quiz(req: QuizFetchRequest):
+def fetch_quiz(req: QuizFetchRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     # Verify user and topic exist
     user = get_document("users", req.user_id)
@@ -120,12 +122,16 @@ def fetch_quiz(req: QuizFetchRequest):
 # QUIZ SUBMIT & GRADE
 
 @router.post("/submit", response_model=QuizSubmitResponse)
-def submit_quiz(req: QuizSubmitRequest):
+def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     # Verify session exists
     session = get_document("quiz_sessions", req.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Quiz session not found")
+
+    # The session must belong to the caller
+    require_same_user(session.get("user_id", ""), uid)
 
     # Verify user and topic
     user = get_document("users", req.user_id)
@@ -335,7 +341,8 @@ def request_hint(req: HintRequest):
 # GENERATE PERSONALIZED QUIZ
 
 @router.post("/generate-personalized", response_model=QuizFetchResponse)
-def generate_personalized_quiz(req: PersonalizedQuizRequest):
+def generate_personalized_quiz(req: PersonalizedQuizRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     # Verify user and topic
     user = get_document("users", req.user_id)

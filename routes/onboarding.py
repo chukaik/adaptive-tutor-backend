@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import OnboardingRequest, OnboardingResponse
+from services.auth import get_current_uid, require_same_user
 from services.firebase_service import (
     get_document, set_document, update_document, query_collection
 )
@@ -9,7 +10,8 @@ router = APIRouter()
 
 
 @router.post("/complete", response_model=OnboardingResponse)
-def complete_onboarding(req: OnboardingRequest):
+def complete_onboarding(req: OnboardingRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     # Verify user exists in Firebase Auth / users collection
     user = get_document("users", req.user_id)

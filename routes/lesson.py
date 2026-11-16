@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from services.auth import get_current_uid, require_same_user
 from services.firebase_service import (
     get_document, set_document, query_collection
 )
@@ -58,11 +59,12 @@ def save_lesson(user_id: str, topic_id: str, lesson_data: dict, is_remedial: boo
 # ENDPOINTS
 
 @router.post("/fetch")
-def fetch_lesson(req: LessonRequest):
+def fetch_lesson(req: LessonRequest, uid: str = Depends(get_current_uid)):
     """
     Fetch lesson for a topic.
     Returns saved lesson if it exists, otherwise generates a new one.
     """
+    require_same_user(req.user_id, uid)
 
     # Verify user and topic
     user = get_document("users", req.user_id)
@@ -120,12 +122,13 @@ def fetch_lesson(req: LessonRequest):
 
 
 @router.post("/remedial")
-def fetch_remedial_lesson(req: RemedialLessonRequest):
+def fetch_remedial_lesson(req: RemedialLessonRequest, uid: str = Depends(get_current_uid)):
     """
     Generate a remedial lesson targeting only the student's weak subtopics.
     Called after a student fails a quiz.
     Always generates fresh — never returns cached for remedial.
     """
+    require_same_user(req.user_id, uid)
 
     # Verify user and topic
     user = get_document("users", req.user_id)
@@ -184,11 +187,12 @@ def fetch_remedial_lesson(req: RemedialLessonRequest):
 
 
 @router.get("/history/{user_id}/{topic_id}")
-def get_lesson_history(user_id: str, topic_id: str):
+def get_lesson_history(user_id: str, topic_id: str, uid: str = Depends(get_current_uid)):
     """
     Returns both the initial and latest remedial lesson for a user+topic.
     Used by the Topic screen to show lesson history.
     """
+    require_same_user(user_id, uid)
 
     initial_id  = f"{user_id}_{topic_id}_initial"
     remedial_id = f"{user_id}_{topic_id}_remedial"

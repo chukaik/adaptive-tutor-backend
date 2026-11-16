@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import ProgressResponse, TopicProgressOut, MasteryLevel, StreakRequest, StreakResponse
+from services.auth import get_current_uid, require_same_user
 from services.firebase_service import (
     get_document, query_collection, update_document
 )
@@ -10,7 +11,8 @@ router = APIRouter()
 
 
 @router.get("/learning-state/{user_id}/{course_id}")
-def get_learning_state(user_id: str, course_id: str):
+def get_learning_state(user_id: str, course_id: str, uid: str = Depends(get_current_uid)):
+    require_same_user(user_id, uid)
 
     # Verify user exists
     user = get_document("users", user_id)
@@ -64,7 +66,8 @@ def get_learning_state(user_id: str, course_id: str):
 
 
 @router.get("/{user_id}", response_model=ProgressResponse)
-def get_full_progress(user_id: str):
+def get_full_progress(user_id: str, uid: str = Depends(get_current_uid)):
+    require_same_user(user_id, uid)
 
     # Verify user exists
     user = get_document("users", user_id)
@@ -122,7 +125,8 @@ def get_full_progress(user_id: str):
 
 
 @router.post("/streak/update", response_model=StreakResponse)
-def update_streak(req: StreakRequest):
+def update_streak(req: StreakRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     user = get_document("users", req.user_id)
     if not user:
