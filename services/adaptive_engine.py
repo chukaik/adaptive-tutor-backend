@@ -37,12 +37,14 @@ def evaluate(
                     "passed":        True,
                     "message":       "Outstanding! You've completed all topics in this course!"
                 }
+        else:
+            raise ValueError(
+                f"Unknown quiz difficulty {difficulty!r}: expected 'easy' or 'hard'."
+            )
     else:
-        # Determine mastery level based on score
+        # Failing score: 60-79.99 is medium mastery, below 60 is low
         if score >= 60:
             mastery = MasteryLevel.medium
-        elif score >= 40:
-            mastery = MasteryLevel.low
         else:
             mastery = MasteryLevel.low
 
