@@ -1,14 +1,28 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import onboarding, quiz, adaptive, chat, progress, lesson
 from services.auth import get_current_uid
 
+load_dotenv()
+
 app = FastAPI(title="Adaptive Tutor API", version="1.0.0")
+
+# Comma-separated list, e.g. "https://app.example.com,http://localhost:8081".
+# Unset means no browser origin is allowed. Credentials are off because the
+# Firebase token travels in the Authorization header, not in cookies.
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
