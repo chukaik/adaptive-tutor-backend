@@ -7,9 +7,6 @@ Two courses are currently loaded by the seed scripts: COS201 Computer Programmin
 ## The problem it addresses
 
 In a typical course every student receives the same material at the same pace, and a student can move on to a new topic with gaps in an earlier one. AdaptiveTutor tries to address this in two ways: it gates progression on a mastery threshold, and after a failed quiz it gives the student a lesson and a quiz aimed at the subtopics they got wrong rather than repeating the same material.
-
-> TODO (author): add the motivating sources or observations from the project report, if you want to cite them here.
-
 ## How it works
 
 1. **Starting a course.** After sign-up the client calls `/onboarding/complete` (or `/adaptive/init-course`). This creates one `student_progress` record per topic; only the first topic is unlocked.
@@ -53,7 +50,7 @@ flowchart TD
 
 The assistant **Chukky** (`/chat/message`) answers questions about the course and about how the app works. Its system prompt describes the app and both courses; the client may pass the topic the student is studying, and the last 10 messages of the conversation are included for context.
 
-> TODO (author): confirm in the frontend that it calls the remedial lesson and personalised quiz automatically after a failed quiz (the backend only provides the endpoints).
+The client runs this remedial step automatically. Each topic is divided into subtopics (sections); when a student fails a quiz, the client notes every subtopic in which they answered a question wrongly, then requests a remedial lesson covering all of those subtopics and a personalised quiz generated from them.
 
 ## Architecture
 
@@ -103,7 +100,7 @@ tests/                   pytest suite (no network; Firestore and OpenAI are fake
 | `chat_history/{user}/sessions/{id}/messages` | `/chat/message` | Chat sessions (title, message count) and their messages |
 | `chat_history/{user}/messages` | `/chat/message` | Older flat copy of every message, kept for backward compatibility |
 
-> TODO (author): the cleanup scripts also mention `badges` and `user_badges`. This API never reads or writes them; confirm whether the client does.
+The client also uses two collections that this API never reads or writes: `badges` and `user_badges`. `seed/cleanup_users.py` deletes `user_badges` along with other user data and keeps the `badges` definitions.
 
 ## API
 
@@ -211,7 +208,9 @@ Ratings from 10 participants, 1 = strongly disagree, 5 = strongly agree.
 
 Every rating was 4 or 5. With scores this close to the maximum, the test cannot separate an app that is good from one that is very good, and the differences between statements (4.70 to 4.90) amount to one or two participants choosing 4 instead of 5.
 
-> TODO (author): add how participants were recruited, their year and course, how long they used the app, and when the test took place.
+The participants were Computer Science students at Adeleke University, from 200 to 400 level, selected at random from the department.
+
+> TODO (author): add how long participants used the app and when the test took place.
 
 ## Limitations and what was not evaluated
 
@@ -241,5 +240,3 @@ This project was supervised by Mr Jeremiah Balogun, Department of Computer Scien
 Curriculum guides combine the COS201 lecture notes with CCMAS course descriptions (CSC301 uses CCMAS descriptions only). Lessons, questions and chat replies are generated with OpenAI models.
 
 The Department of Computer Science, Adeleke University, gave permission to publish the COS201 lecture notes in this repository (`seed/COS201.pdf` and the lecture-note text in `seed/curriculum_extracted.json`).
-
-> TODO (author): add any other acknowledgements.
