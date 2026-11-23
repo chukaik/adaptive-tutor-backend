@@ -183,7 +183,8 @@ def test_typed_answers_are_graded_by_the_model(client, course, openai):
             "correct_answer": "Last in, first out", "explanation": "",
         })
     session = {"session_id": course.collection("quiz_sessions").add(
-        {"user_id": "alice", "topic_id": T1, "difficulty": "easy"})[1].id, "topic_id": T1}
+        {"user_id": "alice", "topic_id": T1, "difficulty": "easy",
+         "questions": ["typed0", "typed1"], "answers_submitted": []})[1].id, "topic_id": T1}
     openai.replies = ['```json\n{"is_correct": true, "reasoning": "Same meaning."}\n```',
                       '{"is_correct": false, "reasoning": "Describes a queue."}']
     answers = [{"question_id": "typed0", "question_type": "typed", "student_answer": "last one in leaves first"},
@@ -352,13 +353,8 @@ def test_unusable_model_reply_is_502(client, course, openai):
     assert course.doc("user_lessons", f"alice_{T1}_initial") is None
 
 
-# ── Known gaps: these document real bugs and are expected to fail ────────────
+# ── Grading against the quiz session ─────────────────────────────────────────
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: /quiz/submit scores only the answers sent, without checking them "
-    "against the session's questions. Answering 1 of 10 questions correctly "
-    "scores 100% and passes."
-))
 def test_submitting_a_subset_of_questions_does_not_pass(client, course):
     onboard(client)
     easy = fetch(client, "easy").json()
@@ -369,11 +365,6 @@ def test_submitting_a_subset_of_questions_does_not_pass(client, course):
     assert r.json()["passed"] is False
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: /quiz/submit trusts the difficulty in the request, not the "
-    "session's. Submitting an easy session as 'hard' skips the hard quiz "
-    "and unlocks the next topic."
-))
 def test_easy_session_submitted_as_hard_does_not_unlock_next_topic(client, course):
     onboard(client)
     easy = fetch(client, "easy").json()

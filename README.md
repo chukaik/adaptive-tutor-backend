@@ -15,7 +15,7 @@ In a typical course every student receives the same material at the same pace, a
 1. **Starting a course.** After sign-up the client calls `/onboarding/complete` (or `/adaptive/init-course`). This creates one `student_progress` record per topic; only the first topic is unlocked.
 2. **Lesson.** `/lesson/fetch` asks the model for a lesson covering every subtopic of the topic. The prompt includes the topic's curriculum guide (lecturer's notes and CCMAS curriculum notes stored in Firestore), so the lesson is grounded in the course content. The lesson is saved per student and served from storage on later visits.
 3. **Easy quiz.** `/quiz/fetch` picks 10 questions at random from the topic's question bank for the requested difficulty (the seed scripts write 15 per difficulty per topic). Correct answers are never sent to the client.
-4. **Grading.** `/quiz/submit` grades each answer. Multiple-choice answers are compared with the stored answer (case-insensitive, ignoring surrounding whitespace). Typed answers are graded by the model, which is asked to judge meaning rather than exact wording and returns a verdict and a one-sentence reason. The score is the percentage of answers marked correct.
+4. **Grading.** `/quiz/submit` grades against the quiz session created by `/quiz/fetch`, not against what the client sends. Every question in the session is graded; an unanswered question counts as wrong. Each question is graded by the type stored in the question bank. Multiple-choice answers are compared with the stored answer (case-insensitive, ignoring surrounding whitespace). Typed answers are graded by the model, which is asked to judge meaning rather than exact wording and returns a verdict and a one-sentence reason. The score is the percentage of the session's questions answered correctly, and the 80% rule uses the session's difficulty. A submission is refused with 400 if it answers a question that is not in the session, answers a question twice, or names a different topic or difficulty from the session, and with 409 if the session has already been submitted.
 5. **The 80% rule** (`services/adaptive_engine.py`):
 
    | Quiz | Score | Result | Mastery recorded |
@@ -168,7 +168,7 @@ Then open http://127.0.0.1:8000/docs.
 pytest
 ```
 
-The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`). Three tests are marked as expected failures; each documents a known bug listed under Limitations.
+The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`). One test is marked as an expected failure; it documents a known bug listed under Limitations.
 
 **Seed scripts.** Run from the repository root. They write to whichever Firebase project `serviceAccountKey.json` belongs to.
 
@@ -220,9 +220,7 @@ Every rating was 4 or 5. With scores this close to the maximum, the test cannot 
 - The model's grading of typed short answers was not checked against human marking.
 - Model-written seed questions and personalised questions were not systematically reviewed for correctness.
 
-**Known issues in the code** (each of the first three has a test marked as an expected failure)
-- `/quiz/submit` scores only the answers sent and does not check them against the quiz session's questions, so a client that submits one correct answer scores 100%.
-- `/quiz/submit` uses the difficulty in the request rather than the session's, so an easy-quiz session submitted as "hard" unlocks the next topic.
+**Known issues in the code** (the first has a test marked as an expected failure)
 - A failing score between 79.5% and 79.99% is reported as "You scored 80%. You need 80% to progress."
 - Personalised questions are saved to the shared `question_bank` with no owner, so `/quiz/fetch` can later serve one student's remedial questions to other students. (Chukky's system prompt tells students the opposite.)
 - If typed-answer grading fails partway through a submission, earlier answers' usage counts in `question_bank` have already been updated.
