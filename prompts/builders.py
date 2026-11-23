@@ -8,6 +8,18 @@ does that.
 from prompts.system import SYSTEM_PROMPT
 
 
+def course_label(course: dict | None) -> str:
+    """
+    The course as named in prompts: the course document's title, followed by
+    its programming language in brackets when the document has a "language"
+    field, e.g. "Data Structures (C++)". Falls back to "Computer Science".
+    """
+    if not course or not course.get("title"):
+        return "Computer Science"
+    language = course.get("language")
+    return f"{course['title']} ({language})" if language else course["title"]
+
+
 def build_curriculum_context(guide: dict | None) -> str:
     """
     Turn a curriculum_guides document into the reference text that grounds
@@ -41,10 +53,12 @@ def explanation_messages(
     correct_answer: str,
     student_answer: str,
     is_correct: bool,
-    topic: str
+    topic: str,
+    *,
+    course: str
 ) -> list[dict]:
     status = "correctly" if is_correct else "incorrectly"
-    prompt = f"""A student answered this Java question {status}.
+    prompt = f"""A student answered this {course} question {status}.
 
 Topic: {topic}
 Question: {question_text}
@@ -64,9 +78,11 @@ Keep the explanation to 3-4 sentences."""
 def grading_messages(
     question_text: str,
     correct_answer: str,
-    student_answer: str
+    student_answer: str,
+    *,
+    course: str
 ) -> list[dict]:
-    prompt = f"""You are grading a typed answer from an undergraduate Java student.
+    prompt = f"""You are grading a typed answer from an undergraduate {course} student.
 
 Question: {question_text}
 Expected Answer: {correct_answer}
@@ -109,7 +125,9 @@ def personalized_quiz_messages(
     weak_subtopics: list,
     difficulty: str,
     curriculum_context: str,
-    count: int = 10
+    count: int = 10,
+    *,
+    course: str
 ) -> list[dict]:
     subtopic_list = "\n".join(f"- {s}" for s in weak_subtopics)
     difficulty_guidance = (
@@ -121,7 +139,7 @@ def personalized_quiz_messages(
     )
 
     prompt = f"""You are generating a personalized remedial quiz for a student who 
-struggled with specific subtopics in a Java programming course.
+struggled with specific subtopics in a {course} programming course.
 
 TOPIC: {topic_title}
 DIFFICULTY: {difficulty.upper()}
@@ -160,7 +178,9 @@ def lesson_messages(
     subtopics: list,
     curriculum_context: str,
     is_remedial: bool = False,
-    weak_subtopics: list = None
+    weak_subtopics: list = None,
+    *,
+    course: str
 ) -> list[dict]:
     """
     Messages for a full lesson, or, when is_remedial is True and
@@ -198,7 +218,7 @@ Requirements:
 
     subtopic_list = "\n".join(f"- {s}" for s in subtopics_to_cover)
 
-    prompt = f"""You are an expert Java programming lecturer generating a comprehensive 
+    prompt = f"""You are an expert {course} programming lecturer generating a comprehensive 
 lesson for undergraduate Computer Science students at Adeleke University.
 
 TOPIC: {topic_title}
@@ -230,7 +250,7 @@ No preamble, no markdown fences, no extra text outside the JSON:
 {{
   "topic_title": "{topic_title}",
   "is_remedial": {str(is_remedial).lower()},
-  "introduction": "A warm, engaging 3-4 sentence introduction to the topic that tells the student what they will learn and why it matters in real Java development.",
+  "introduction": "A warm, engaging 3-4 sentence introduction to the topic that tells the student what they will learn and why it matters in real {course} development.",
   "subtopics": [
     {{
       "title": "exact subtopic name from the list above",
@@ -239,12 +259,12 @@ No preamble, no markdown fences, no extra text outside the JSON:
       "code_examples": [
         {{
           "description": "what this code example demonstrates",
-          "code": "the actual Java code with inline comments on each line",
+          "code": "the actual {course} code with inline comments on each line",
           "output": "the expected output or result of running this code, if applicable"
         }},
         {{
           "description": "a second code example showing a different use case or variation",
-          "code": "second Java code example with comments",
+          "code": "second {course} code example with comments",
           "output": "expected output if applicable"
         }}
       ],

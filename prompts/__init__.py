@@ -8,6 +8,7 @@ build_curriculum_context.
 """
 from prompts.system import SYSTEM_PROMPT
 from prompts.builders import (
+    course_label,
     build_curriculum_context,
     hint_messages,
     explanation_messages,
@@ -19,6 +20,7 @@ from prompts.builders import (
 
 __all__ = [
     "SYSTEM_PROMPT",
+    "course_label",
     "build_curriculum_context",
     "hint_messages",
     "explanation_messages",

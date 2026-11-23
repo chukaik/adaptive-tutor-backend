@@ -1,0 +1,56 @@
+# Exact versions of every package installed by requirements.txt, generated with
+# `pip freeze` from a clean Python 3.13 virtual environment. Used as a
+# constraints file (pip install -r ... -c constraints.txt) so CI and Render
+# install the same transitive versions. Regenerate after changing requirements.txt.
+annotated-doc==0.0.7
+annotated-types==0.8.0
+anyio==4.16.0
+CacheControl==0.15.0
+certifi==2026.11.20
+cffi==2.1.1
+charset-normalizer==3.5.3
+click==8.5.1
+colorama==0.4.6
+cryptography==50.0.2
+distro==1.9.0
+fastapi==0.135.1
+firebase_admin==7.2.0
+google-api-core==2.44.0
+google-auth==2.63.1
+google-cloud-core==2.8.0
+google-cloud-firestore==2.34.1
+google-cloud-storage==3.17.1
+google-crc32c==1.9.0
+google-resumable-media==2.11.0
+googleapis-common-protos==1.76.0
+grpcio==1.85.3
+grpcio-status==1.85.3
+h11==0.16.0
+h2==4.4.1
+hpack==4.2.0
+httpcore==1.0.9
+httpx==0.28.1
+hyperframe==6.1.0
+idna==3.20
+jiter==0.19.0
+msgpack==1.2.4
+openai==2.26.0
+opentelemetry-api==1.45.2
+proto-plus==1.29.0
+protobuf==7.36.2
+pyasn1==0.6.5
+pyasn1_modules==0.4.2
+pycparser==3.12
+pydantic==2.12.5
+pydantic_core==2.41.5
+PyJWT==2.15.1
+PyMuPDF==1.27.2
+python-dotenv==1.2.2
+requests==2.34.2
+sniffio==1.3.1
+starlette==1.10.0
+tqdm==4.70.1
+typing-inspection==0.4.5
+typing_extensions==4.16.0
+urllib3==2.8.0
+uvicorn==0.41.0

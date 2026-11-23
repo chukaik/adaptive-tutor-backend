@@ -166,7 +166,7 @@ def fake_openai(monkeypatch):
 
 def test_service_retries_with_identical_request(fake_openai):
     fake_openai["replies"] = ["oops", '```json\n{"is_correct": true, "reasoning": "r"}\n```']
-    result = openai_service.grade_typed_answer("Q", "A", "A")
+    result = openai_service.grade_typed_answer("Q", "A", "A", course="Data Structures")
     assert result == {"is_correct": True, "reasoning": "r"}
     first, second = fake_openai["requests"]
     assert first == second

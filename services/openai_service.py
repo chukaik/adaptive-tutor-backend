@@ -54,10 +54,13 @@ def get_explanation(
     correct_answer: str,
     student_answer: str,
     is_correct: bool,
-    topic: str
+    topic: str,
+    *,
+    course: str
 ) -> str:
     return _complete(
-        explanation_messages(question_text, correct_answer, student_answer, is_correct, topic),
+        explanation_messages(question_text, correct_answer, student_answer, is_correct, topic,
+                             course=course),
         llm_settings.EXPLANATION,
     )
 
@@ -65,9 +68,11 @@ def get_explanation(
 def grade_typed_answer(
     question_text: str,
     correct_answer: str,
-    student_answer: str
+    student_answer: str,
+    *,
+    course: str
 ) -> dict:
-    messages = grading_messages(question_text, correct_answer, student_answer)
+    messages = grading_messages(question_text, correct_answer, student_answer, course=course)
     return request_json(
         lambda: _complete(messages, llm_settings.GRADING),
         GRADING_RESULT,
@@ -92,12 +97,15 @@ def generate_personalized_questions(
     difficulty: str,
     curriculum_context: str,
     previous_question_ids: list,
-    count: int = 10
+    count: int = 10,
+    *,
+    course: str
 ) -> list:
     # previous_question_ids is accepted for API compatibility; the prompt
     # does not use it.
     messages = personalized_quiz_messages(
-        topic_title, weak_subtopics, difficulty, curriculum_context, count
+        topic_title, weak_subtopics, difficulty, curriculum_context, count,
+        course=course,
     )
     return request_json(
         lambda: _complete(messages, llm_settings.QUIZ),
@@ -111,14 +119,17 @@ def generate_lesson_content(
     subtopics: list,
     curriculum_context: str,
     is_remedial: bool = False,
-    weak_subtopics: list = None
+    weak_subtopics: list = None,
+    *,
+    course: str
 ) -> dict:
     """
     Generate deep, elaborated lesson content for a topic.
     If is_remedial=True, regenerate only weak subtopics in simpler language.
     """
     messages = lesson_messages(
-        topic_title, subtopics, curriculum_context, is_remedial, weak_subtopics
+        topic_title, subtopics, curriculum_context, is_remedial, weak_subtopics,
+        course=course,
     )
     return request_json(
         lambda: _complete(messages, llm_settings.LESSON),

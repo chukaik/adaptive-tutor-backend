@@ -3,7 +3,7 @@ from models.schemas import (
     QuizFetchRequest, QuizFetchResponse, QuestionOut,
     QuizSubmitRequest, QuizSubmitResponse, QuestionResult,
     HintRequest, HintResponse, PersonalizedQuizRequest,
-    NextAction, MasteryLevel, Difficulty
+    NextAction, MasteryLevel, Difficulty, QuestionType
 )
 from services.firebase_service import (
     get_document, set_document, update_document,
@@ -13,7 +13,7 @@ from services.openai_service import (
     get_hint, get_explanation, grade_typed_answer,
     generate_personalized_questions
 )
-from prompts import build_curriculum_context
+from prompts import build_curriculum_context, course_label
 from services.adaptive_engine import evaluate, compute_score
 from services.auth import get_current_uid, require_same_user
 from firebase_admin import firestore
@@ -26,6 +26,12 @@ router = APIRouter()
 
 def fetch_curriculum_context(topic_id: str) -> str:
     return build_curriculum_context(get_document("curriculum_guides", topic_id))
+
+
+def fetch_course_label(topic: dict) -> str:
+    """How prompts name the topic's course, from the course document."""
+    course_id = topic.get("course_id")
+    return course_label(get_document("courses", course_id) if course_id else None)
 
 
 # QUIZ FETCH
@@ -127,41 +133,83 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
     # The session must belong to the caller
     require_same_user(session.get("user_id", ""), uid)
 
+    # A session is graded once
+    if session.get("answers_submitted"):
+        raise HTTPException(status_code=409, detail="This quiz has already been submitted.")
+
+    # Grade against the session, not against what the client sends
+    topic_id     = session.get("topic_id", "")
+    difficulty   = session.get("difficulty", "")
+    question_ids = session.get("questions") or []
+
+    if req.topic_id != topic_id:
+        raise HTTPException(status_code=400, detail="topic_id does not match this quiz session.")
+    if req.difficulty.value != difficulty:
+        raise HTTPException(status_code=400, detail="difficulty does not match this quiz session.")
+    if not question_ids:
+        raise HTTPException(status_code=400, detail="This quiz session has no questions.")
+
+    answers_by_id = {}
+    for answer in req.answers:
+        if answer.question_id not in question_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Question {answer.question_id} is not part of this quiz session.",
+            )
+        if answer.question_id in answers_by_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Question {answer.question_id} was answered more than once.",
+            )
+        answers_by_id[answer.question_id] = answer.student_answer
+
     # Verify user and topic
     user = get_document("users", req.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    topic = get_document("topics", req.topic_id)
+    topic = get_document("topics", topic_id)
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
-    # Grade each answer
+    # Load every question in the session before grading or writing anything
+    question_docs = {}
+    for question_id in question_ids:
+        question_doc = get_document("question_bank", question_id)
+        if not question_doc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Question {question_id} in this quiz session no longer exists.",
+            )
+        question_docs[question_id] = question_doc
+
+    course = fetch_course_label(topic)
+
+    # Grade every question in the session; an unanswered question is wrong
     results          = []
     correct_count    = 0
     weak_question_ids = []
     weak_subtopics   = set()
     answers_submitted = []
 
-    for answer in req.answers:
-        # Fetch the question document to get correct answer
-        question_doc = get_document("question_bank", answer.question_id)
-
-        if not question_doc:
-            continue
+    for question_id in question_ids:
+        question_doc   = question_docs[question_id]
+        student_answer = answers_by_id.get(question_id, "")
 
         correct_answer = question_doc.get("correct_answer", "")
         question_text  = question_doc.get("question_text", "")
-        question_type  = question_doc.get("question_type", "multiple_choice")
+        question_type  = QuestionType(question_doc.get("question_type", "multiple_choice"))
         subtopic       = question_doc.get("subtopic", "")
         explanation    = question_doc.get("explanation", "")
         ai_reasoning   = None
 
-        # Grade based on question type
-        if answer.question_type.value == "multiple_choice":
+        # Grade by the question type stored in the question bank
+        if not student_answer.strip():
+            is_correct = False
+        elif question_type == QuestionType.multiple_choice:
             # Direct comparison — strip whitespace for safety
             is_correct = (
-                answer.student_answer.strip().lower() ==
+                student_answer.strip().lower() ==
                 correct_answer.strip().lower()
             )
         else:
@@ -169,7 +217,8 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
             grading_result = grade_typed_answer(
                 question_text  = question_text,
                 correct_answer = correct_answer,
-                student_answer = answer.student_answer,
+                student_answer = student_answer,
+                course         = course,
             )
             is_correct   = grading_result.get("is_correct", False)
             ai_reasoning = grading_result.get("reasoning", "")
@@ -177,30 +226,30 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
         if is_correct:
             correct_count += 1
             # Update question usage stats
-            update_document("question_bank", answer.question_id, {
+            update_document("question_bank", question_id, {
                 "times_used":    firestore.Increment(1),
                 "times_correct": firestore.Increment(1),
             })
         else:
-            weak_question_ids.append(answer.question_id)
+            weak_question_ids.append(question_id)
             weak_subtopics.add(subtopic)
-            update_document("question_bank", answer.question_id, {
+            update_document("question_bank", question_id, {
                 "times_used": firestore.Increment(1),
             })
 
         answers_submitted.append({
-            "question_id":       answer.question_id,
-            "question_type":     answer.question_type.value,
-            "student_answer":    answer.student_answer,
+            "question_id":       question_id,
+            "question_type":     question_type.value,
+            "student_answer":    student_answer,
             "is_correct":        is_correct,
             "ai_grading_reasoning": ai_reasoning,
         })
 
         results.append(QuestionResult(
-            question_id    = answer.question_id,
+            question_id    = question_id,
             question_text  = question_text,
-            question_type  = answer.question_type,
-            student_answer = answer.student_answer,
+            question_type  = question_type,
+            student_answer = student_answer,
             correct_answer = correct_answer,
             is_correct     = is_correct,
             explanation    = explanation,
@@ -208,8 +257,8 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
             ai_reasoning   = ai_reasoning,
         ))
 
-    # Calculate score
-    total    = len(req.answers)
+    # Calculate score over every question in the session
+    total    = len(question_ids)
     score    = compute_score(correct_count, total)
 
     # Run adaptive engine
@@ -226,7 +275,7 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
 
     adaptive_result = evaluate(
         score          = score,
-        difficulty     = req.difficulty.value,
+        difficulty     = difficulty,
         has_next_topic = next_topic is not None,
     )
 
@@ -237,7 +286,7 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
     next_topic_id = None
 
     # Update student_progress
-    progress_doc_id = f"{req.user_id}_{req.topic_id}"
+    progress_doc_id = f"{req.user_id}_{topic_id}"
     progress        = get_document("student_progress", progress_doc_id)
     current_attempts = progress.get("attempts", 0) if progress else 0
 
@@ -288,7 +337,7 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
 
     elif next_action == NextAction.repeat_concept:
         # Update best score only if better than current
-        if req.difficulty.value == "easy":
+        if difficulty == "easy":
             current_best = progress.get("easy_quiz_best_score", 0.0) if progress else 0.0
             progress_update["easy_quiz_best_score"] = max(score, current_best)
         else:
@@ -358,6 +407,7 @@ def generate_personalized_quiz(req: PersonalizedQuizRequest, uid: str = Depends(
         curriculum_context     = curriculum_context,
         previous_question_ids  = req.previous_question_ids,
         count                  = 10,
+        course                 = fetch_course_label(topic),
     )
 
     # Save generated questions to question_bank

@@ -4,18 +4,25 @@ AdaptiveTutor is an adaptive tutoring app for undergraduate computer science cou
 
 Two courses are currently loaded by the seed scripts: COS201 Computer Programming I (8 topics, taught in Java) and CSC301 Data Structures (6 topics, taught in C++).
 
+## What it looks like
+
+<p>
+  <img src="docs/screenshots/quiz-result.jpg" width="260" alt="Quiz result: 90%, passed, hard quiz unlocked, with a per-question breakdown">
+  &nbsp;
+  <img src="docs/screenshots/remedial-lesson.jpg" width="260" alt="Personalised remedial lesson with an introduction, explanation, analogy and code examples">
+</p>
+
+Left: a quiz result graded by `/quiz/submit`. Right: a personalised remedial lesson from `/lesson/remedial`. The full set of screenshots is in the [frontend README](https://github.com/chukaik/adaptive-tutor-frontend#screenshots).
+
 ## The problem it addresses
 
 In a typical course every student receives the same material at the same pace, and a student can move on to a new topic with gaps in an earlier one. AdaptiveTutor tries to address this in two ways: it gates progression on a mastery threshold, and after a failed quiz it gives the student a lesson and a quiz aimed at the subtopics they got wrong rather than repeating the same material.
-
-> TODO (author): add the motivating sources or observations from the project report, if you want to cite them here.
-
 ## How it works
 
 1. **Starting a course.** After sign-up the client calls `/onboarding/complete` (or `/adaptive/init-course`). This creates one `student_progress` record per topic; only the first topic is unlocked.
 2. **Lesson.** `/lesson/fetch` asks the model for a lesson covering every subtopic of the topic. The prompt includes the topic's curriculum guide (lecturer's notes and CCMAS curriculum notes stored in Firestore), so the lesson is grounded in the course content. The lesson is saved per student and served from storage on later visits.
 3. **Easy quiz.** `/quiz/fetch` picks 10 questions at random from the topic's question bank for the requested difficulty (the seed scripts write 15 per difficulty per topic). Correct answers are never sent to the client.
-4. **Grading.** `/quiz/submit` grades each answer. Multiple-choice answers are compared with the stored answer (case-insensitive, ignoring surrounding whitespace). Typed answers are graded by the model, which is asked to judge meaning rather than exact wording and returns a verdict and a one-sentence reason. The score is the percentage of answers marked correct.
+4. **Grading.** `/quiz/submit` grades against the quiz session created by `/quiz/fetch`, not against what the client sends. Every question in the session is graded; an unanswered question counts as wrong. Each question is graded by the type stored in the question bank. Multiple-choice answers are compared with the stored answer (case-insensitive, ignoring surrounding whitespace). Typed answers are graded by the model, which is asked to judge meaning rather than exact wording and returns a verdict and a one-sentence reason. The score is the percentage of the session's questions answered correctly, and the 80% rule uses the session's difficulty. A submission is refused with 400 if it answers a question that is not in the session, answers a question twice, or names a different topic or difficulty from the session, and with 409 if the session has already been submitted.
 5. **The 80% rule** (`services/adaptive_engine.py`):
 
    | Quiz | Score | Result | Mastery recorded |
@@ -53,7 +60,7 @@ flowchart TD
 
 The assistant **Chukky** (`/chat/message`) answers questions about the course and about how the app works. Its system prompt describes the app and both courses; the client may pass the topic the student is studying, and the last 10 messages of the conversation are included for context.
 
-> TODO (author): confirm in the frontend that it calls the remedial lesson and personalised quiz automatically after a failed quiz (the backend only provides the endpoints).
+The client runs this remedial step automatically. Each topic is divided into subtopics (sections); when a student fails a quiz, the client notes every subtopic in which they answered a question wrongly, then requests a remedial lesson covering all of those subtopics and a personalised quiz generated from them.
 
 ## Architecture
 
@@ -93,7 +100,7 @@ tests/                   pytest suite (no network; Firestore and OpenAI are fake
 | Collection | Written by | What each document stores |
 |---|---|---|
 | `users` | client; this API updates it | Profile and onboarding answers, `login_streak`, `longest_streak`, `last_login_date` |
-| `courses` | seed scripts | Course title, code, faculty, year level |
+| `courses` | seed scripts | Course title, code, faculty, year level, and optionally `language` (the programming language, e.g. `C++`). Lesson, quiz and grading prompts name the course by its title, followed by the language in brackets when it is set. |
 | `topics` | seed scripts | Title, `course_id`, `order_index`, `prerequisite_topic_id` |
 | `curriculum_guides` | seed scripts | Per topic (document ID = topic ID): subtopics with their curriculum text (`key_content`) |
 | `question_bank` | seed scripts and `/quiz/generate-personalized` | Question, type, options, correct answer, explanation, subtopic, difficulty, usage counts, `source` |
@@ -103,7 +110,7 @@ tests/                   pytest suite (no network; Firestore and OpenAI are fake
 | `chat_history/{user}/sessions/{id}/messages` | `/chat/message` | Chat sessions (title, message count) and their messages |
 | `chat_history/{user}/messages` | `/chat/message` | Older flat copy of every message, kept for backward compatibility |
 
-> TODO (author): the cleanup scripts also mention `badges` and `user_badges`. This API never reads or writes them; confirm whether the client does.
+The client also uses two collections that this API never reads or writes: `badges` and `user_badges`. `seed/cleanup_users.py` deletes `user_badges` along with other user data and keeps the `badges` definitions.
 
 ## API
 
@@ -131,17 +138,19 @@ All paths except `/health` need a Firebase ID token. Interactive documentation i
 
 ## Setup
 
-**Python.** Developed and tested with Python 3.13; the CI workflow uses 3.13.
+**Python.** Python 3.13. The version is set in `.python-version`, which both Render and the CI workflow read, so the deployed server and the tests use the same minor version.
 
-> TODO (author): confirm the Python version and start command configured on Render.
+**Deployment (Render).** Build command: `pip install -r requirements.txt -c constraints.txt`. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 
 **Install**
 
 ```bash
 python -m venv venv
 source venv/bin/activate            # Windows: venv\Scripts\activate
-pip install -r requirements-dev.txt # app dependencies plus pytest
+pip install -r requirements-dev.txt -c constraints.txt  # app dependencies plus pytest
 ```
+
+`requirements.txt` pins the direct dependencies; `constraints.txt` pins every package they pull in (generated with `pip freeze` from a clean Python 3.13 environment), so local installs, CI and Render get the same versions. After changing `requirements.txt`, regenerate it from a fresh virtual environment: `pip install -r requirements.txt` then `pip freeze`.
 
 **Environment variables** (see `.env.example`; the app loads a `.env` file):
 
@@ -168,7 +177,7 @@ Then open http://127.0.0.1:8000/docs.
 pytest
 ```
 
-The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`). Three tests are marked as expected failures; each documents a known bug listed under Limitations.
+The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`).
 
 **Seed scripts.** Run from the repository root. They write to whichever Firebase project `serviceAccountKey.json` belongs to.
 
@@ -209,7 +218,9 @@ Ratings from 10 participants, 1 = strongly disagree, 5 = strongly agree.
 
 Every rating was 4 or 5. With scores this close to the maximum, the test cannot separate an app that is good from one that is very good, and the differences between statements (4.70 to 4.90) amount to one or two participants choosing 4 instead of 5.
 
-> TODO (author): add how participants were recruited, their year and course, how long they used the app, and when the test took place.
+The participants were Computer Science students at Adeleke University, from 200 to 400 level, selected at random from the department.
+
+> TODO (author): add how long participants used the app and when the test took place.
 
 ## Limitations and what was not evaluated
 
@@ -220,16 +231,11 @@ Every rating was 4 or 5. With scores this close to the maximum, the test cannot 
 - The model's grading of typed short answers was not checked against human marking.
 - Model-written seed questions and personalised questions were not systematically reviewed for correctness.
 
-**Known issues in the code** (each of the first three has a test marked as an expected failure)
-- `/quiz/submit` scores only the answers sent and does not check them against the quiz session's questions, so a client that submits one correct answer scores 100%.
-- `/quiz/submit` uses the difficulty in the request rather than the session's, so an easy-quiz session submitted as "hard" unlocks the next topic.
-- A failing score between 79.5% and 79.99% is reported as "You scored 80%. You need 80% to progress."
+**Known issues in the code**
 - Personalised questions are saved to the shared `question_bank` with no owner, so `/quiz/fetch` can later serve one student's remedial questions to other students. (Chukky's system prompt tells students the opposite.)
 - If typed-answer grading fails partway through a submission, earlier answers' usage counts in `question_bank` have already been updated.
 - There is no per-user limit on the endpoints that call the model.
-- Some prompt wording assumes the course is Java (for example the lesson and grading prompts), although CSC301 is taught in C++.
 - `previous_question_ids` in the personalised-quiz request is accepted but not used.
-- Only direct dependencies are pinned; transitive versions can change between installs.
 
 ## Related repository
 
@@ -243,4 +249,4 @@ This project was supervised by Mr Jeremiah Balogun, Department of Computer Scien
 
 Curriculum guides combine the COS201 lecture notes with CCMAS course descriptions (CSC301 uses CCMAS descriptions only). Lessons, questions and chat replies are generated with OpenAI models.
 
-> TODO (author): add any other acknowledgements, and confirm you have permission to publish `seed/COS201.pdf` and the lecture-note text in `seed/curriculum_extracted.json`.
+The Department of Computer Science, Adeleke University, gave permission to publish the COS201 lecture notes in this repository (`seed/COS201.pdf` and the lecture-note text in `seed/curriculum_extracted.json`).
