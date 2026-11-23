@@ -131,9 +131,9 @@ All paths except `/health` need a Firebase ID token. Interactive documentation i
 
 ## Setup
 
-**Python.** Developed and tested with Python 3.13; the CI workflow uses 3.13.
+**Python.** Python 3.13. The version is set in `.python-version`, which both Render and the CI workflow read, so the deployed server and the tests use the same minor version.
 
-> TODO (author): confirm the Python version and start command configured on Render.
+**Deployment (Render).** Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 
 **Install**
 
