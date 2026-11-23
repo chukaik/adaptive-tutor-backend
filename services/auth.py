@@ -11,9 +11,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth
 
-# Importing firebase_service initialises the Firebase app that
-# verify_id_token relies on.
-import services.firebase_service  # noqa: F401
+from services.firebase_service import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +34,9 @@ def get_current_uid(
     """Return the uid from a valid Firebase ID token, or answer 401."""
     if credentials is None or not credentials.credentials:
         raise _unauthorized("Missing bearer token.")
+
+    # verify_id_token needs the Firebase app to be initialised.
+    get_db()
 
     try:
         decoded = auth.verify_id_token(credentials.credentials)

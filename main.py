@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
@@ -7,10 +8,20 @@ from fastapi.responses import JSONResponse
 from routes import onboarding, quiz, adaptive, chat, progress, lesson
 from services.auth import get_current_uid
 from services.llm_json import ModelReplyError
+from services.firebase_service import get_db
 
 load_dotenv()
 
-app = FastAPI(title="Adaptive Tutor API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Connect to Firebase when the server starts, as the app did before
+    # the connection was made lazy, so bad credentials fail at startup.
+    get_db()
+    yield
+
+
+app = FastAPI(title="Adaptive Tutor API", version="1.0.0", lifespan=lifespan)
 
 # Comma-separated list, e.g. "https://app.example.com,http://localhost:8081".
 # Unset means no browser origin is allowed. Credentials are off because the

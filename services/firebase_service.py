@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore
 import os
 import json
 
+
 def init_firebase():
     if firebase_admin._apps:
         return firestore.client()
@@ -21,32 +22,42 @@ def init_firebase():
     return firestore.client()
 
 
-# Initialize on import
-db = init_firebase()
+# Connect on first use rather than on import, so that importing the app
+# (for example in tests) does not need credentials. main.py still calls
+# get_db() at startup, so a running server connects when it starts.
+_db = None
+
+
+def get_db():
+    """Return the Firestore client, initialising Firebase the first time."""
+    global _db
+    if _db is None:
+        _db = init_firebase()
+    return _db
 
 
 def get_document(collection: str, doc_id: str):
-    doc = db.collection(collection).document(doc_id).get()
+    doc = get_db().collection(collection).document(doc_id).get()
     if doc.exists:
         return {"id": doc.id, **doc.to_dict()}
     return None
 
 
 def set_document(collection: str, doc_id: str, data: dict):
-    db.collection(collection).document(doc_id).set(data)
+    get_db().collection(collection).document(doc_id).set(data)
 
 
 def update_document(collection: str, doc_id: str, data: dict):
-    db.collection(collection).document(doc_id).update(data)
+    get_db().collection(collection).document(doc_id).update(data)
 
 
 def add_document(collection: str, data: dict):
-    doc_ref = db.collection(collection).add(data)
+    doc_ref = get_db().collection(collection).add(data)
     return doc_ref[1].id
 
 
 def query_collection(collection: str, filters: list):
-    ref = db.collection(collection)
+    ref = get_db().collection(collection)
     for field, op, value in filters:
         ref = ref.where(field, op, value)
     docs = ref.stream()
@@ -54,4 +65,4 @@ def query_collection(collection: str, filters: list):
 
 
 def delete_document(collection: str, doc_id: str):
-    db.collection(collection).document(doc_id).delete()
+    get_db().collection(collection).document(doc_id).delete()
