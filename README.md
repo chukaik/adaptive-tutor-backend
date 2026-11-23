@@ -218,9 +218,7 @@ Ratings from 10 participants, 1 = strongly disagree, 5 = strongly agree.
 
 Every rating was 4 or 5. With scores this close to the maximum, the test cannot separate an app that is good from one that is very good, and the differences between statements (4.70 to 4.90) amount to one or two participants choosing 4 instead of 5.
 
-The participants were Computer Science students at Adeleke University, from 200 to 400 level, selected at random from the department.
-
-> TODO (author): add how long participants used the app and when the test took place.
+The participants were Computer Science students at Adeleke University, from 200 to 400 level, selected at random from the department. They used the app throughout the semester, from late January to May 2026, and filled in the questionnaire at a time of their choosing during that period.
 
 ## Limitations and what was not evaluated
 
