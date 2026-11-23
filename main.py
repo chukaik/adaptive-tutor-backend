@@ -1,10 +1,12 @@
 import os
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from routes import onboarding, quiz, adaptive, chat, progress, lesson
 from services.auth import get_current_uid
+from services.llm_json import ModelReplyError
 
 load_dotenv()
 
@@ -37,6 +39,12 @@ app.include_router(adaptive.router,   prefix="/adaptive",   tags=["Adaptive"],  
 app.include_router(chat.router,       prefix="/chat",       tags=["Chat"],       dependencies=auth_required)
 app.include_router(progress.router,   prefix="/progress",   tags=["Progress"],   dependencies=auth_required)
 app.include_router(lesson.router,     prefix="/lesson",     tags=["Lesson"],     dependencies=auth_required)
+
+@app.exception_handler(ModelReplyError)
+def model_reply_error_handler(request: Request, exc: ModelReplyError):
+    # The language model (an upstream service) gave an unusable reply twice.
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
+
 
 @app.get("/health")
 def health_check():

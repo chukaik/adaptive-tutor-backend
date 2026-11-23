@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from prompts import build_curriculum_context
 from services.auth import get_current_uid, require_same_user
 from services.firebase_service import (
     get_document, set_document, query_collection
@@ -32,15 +33,8 @@ def fetch_curriculum_context(topic_id: str) -> tuple:
     if not doc:
         return "", []
 
-    lines     = [f"Topic: {doc.get('topic_title', '')}"]
-    subtopics = []
-
-    for sub in doc.get("subtopics", []):
-        lines.append(f"\nSubtopic: {sub['title']}")
-        lines.append(sub.get("key_content", ""))
-        subtopics.append(sub["title"])
-
-    return "\n".join(lines), subtopics
+    subtopics = [sub["title"] for sub in doc.get("subtopics", [])]
+    return build_curriculum_context(doc), subtopics
 
 
 def save_lesson(user_id: str, topic_id: str, lesson_data: dict, is_remedial: bool):
