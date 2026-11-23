@@ -1,6 +1,13 @@
+from decimal import Decimal, ROUND_DOWN
+
 from models.schemas import NextAction, MasteryLevel
 
 PASS_THRESHOLD = 80.0
+
+
+def format_score(score: float) -> str:
+    """One decimal place, rounded down, so a failing 79.99 reads 79.9, never 80."""
+    return str(Decimal(str(score)).quantize(Decimal("0.1"), rounding=ROUND_DOWN))
 
 
 def evaluate(
@@ -53,7 +60,7 @@ def evaluate(
             "mastery_level": mastery,
             "passed":        False,
             "message":       (
-                f"You scored {score:.0f}%. You need {PASS_THRESHOLD:.0f}% to progress. "
+                f"You scored {format_score(score)}%. You need {PASS_THRESHOLD:.0f}% to progress. "
                 f"Review the lesson and try again — you've got this!"
             )
         }

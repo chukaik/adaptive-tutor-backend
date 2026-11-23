@@ -168,7 +168,7 @@ Then open http://127.0.0.1:8000/docs.
 pytest
 ```
 
-The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`). One test is marked as an expected failure; it documents a known bug listed under Limitations.
+The tests need no credentials and make no network calls: Firestore and OpenAI are replaced by in-memory fakes, Firebase token checks are faked, and outbound connections are blocked. GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`).
 
 **Seed scripts.** Run from the repository root. They write to whichever Firebase project `serviceAccountKey.json` belongs to.
 
@@ -220,8 +220,7 @@ Every rating was 4 or 5. With scores this close to the maximum, the test cannot 
 - The model's grading of typed short answers was not checked against human marking.
 - Model-written seed questions and personalised questions were not systematically reviewed for correctness.
 
-**Known issues in the code** (the first has a test marked as an expected failure)
-- A failing score between 79.5% and 79.99% is reported as "You scored 80%. You need 80% to progress."
+**Known issues in the code**
 - Personalised questions are saved to the shared `question_bank` with no owner, so `/quiz/fetch` can later serve one student's remedial questions to other students. (Chukky's system prompt tells students the opposite.)
 - If typed-answer grading fails partway through a submission, earlier answers' usage counts in `question_bank` have already been updated.
 - There is no per-user limit on the endpoints that call the model.

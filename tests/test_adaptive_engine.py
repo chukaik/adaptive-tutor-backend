@@ -67,17 +67,21 @@ def test_unknown_difficulty_on_pass_raises(score):
         evaluate(score, "medium", True)
 
 
-def test_failing_message_reports_rounded_score():
-    assert evaluate(45, "easy", True)["message"].startswith("You scored 45%.")
+@pytest.mark.parametrize("score,shown", [
+    (45, "45.0"),
+    (0, "0.0"),
+    (66.67, "66.6"),    # rounded down, not to nearest
+    (79.5, "79.5"),
+    (79.95, "79.9"),
+    (79.99, "79.9"),
+])
+def test_failing_message_shows_score_to_one_decimal_rounded_down(score, shown):
+    assert evaluate(score, "easy", True)["message"].startswith(f"You scored {shown}%.")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: a failing score of 79.5-79.99 is formatted with :.0f, so the "
-    "message reads 'You scored 80%. You need 80% to progress.'"
-))
 def test_failing_message_never_claims_the_threshold():
     message = evaluate(79.99, "easy", True)["message"]
-    assert not message.startswith("You scored 80%")
+    assert not message.startswith("You scored 80")
 
 
 # ── compute_score ────────────────────────────────────────────────────────────
