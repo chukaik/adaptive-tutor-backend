@@ -22,9 +22,11 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
+            constraints.txt
 
       - name: Install pinned dependencies
-        run: pip install -r requirements-dev.txt
+        # constraints.txt fixes transitive versions to the ones Render installs.
+        run: pip install -r requirements-dev.txt -c constraints.txt
 
       - name: Run tests
         # No secrets are provided: tests use in-memory fakes and block the network.

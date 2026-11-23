@@ -133,15 +133,17 @@ All paths except `/health` need a Firebase ID token. Interactive documentation i
 
 **Python.** Python 3.13. The version is set in `.python-version`, which both Render and the CI workflow read, so the deployed server and the tests use the same minor version.
 
-**Deployment (Render).** Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+**Deployment (Render).** Build command: `pip install -r requirements.txt -c constraints.txt`. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 
 **Install**
 
 ```bash
 python -m venv venv
 source venv/bin/activate            # Windows: venv\Scripts\activate
-pip install -r requirements-dev.txt # app dependencies plus pytest
+pip install -r requirements-dev.txt -c constraints.txt  # app dependencies plus pytest
 ```
+
+`requirements.txt` pins the direct dependencies; `constraints.txt` pins every package they pull in (generated with `pip freeze` from a clean Python 3.13 environment), so local installs, CI and Render get the same versions. After changing `requirements.txt`, regenerate it from a fresh virtual environment: `pip install -r requirements.txt` then `pip freeze`.
 
 **Environment variables** (see `.env.example`; the app loads a `.env` file):
 
@@ -225,7 +227,6 @@ Every rating was 4 or 5. With scores this close to the maximum, the test cannot 
 - If typed-answer grading fails partway through a submission, earlier answers' usage counts in `question_bank` have already been updated.
 - There is no per-user limit on the endpoints that call the model.
 - `previous_question_ids` in the personalised-quiz request is accepted but not used.
-- Only direct dependencies are pinned; transitive versions can change between installs.
 
 ## Related repository
 
