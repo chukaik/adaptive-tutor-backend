@@ -4,6 +4,16 @@ AdaptiveTutor is an adaptive tutoring app for undergraduate computer science cou
 
 Two courses are currently loaded by the seed scripts: COS201 Computer Programming I (8 topics, taught in Java) and CSC301 Data Structures (6 topics, taught in C++).
 
+## What it looks like
+
+<p>
+  <img src="docs/screenshots/quiz-result.jpg" width="260" alt="Quiz result: 90%, passed, hard quiz unlocked, with a per-question breakdown">
+  &nbsp;
+  <img src="docs/screenshots/remedial-lesson.jpg" width="260" alt="Personalised remedial lesson with an introduction, explanation, analogy and code examples">
+</p>
+
+Left: a quiz result graded by `/quiz/submit`. Right: a personalised remedial lesson from `/lesson/remedial`. The full set of screenshots is in the [frontend README](https://github.com/chukaik/adaptive-tutor-frontend#screenshots).
+
 ## The problem it addresses
 
 In a typical course every student receives the same material at the same pace, and a student can move on to a new topic with gaps in an earlier one. AdaptiveTutor tries to address this in two ways: it gates progression on a mastery threshold, and after a failed quiz it gives the student a lesson and a quiz aimed at the subtopics they got wrong rather than repeating the same material.
