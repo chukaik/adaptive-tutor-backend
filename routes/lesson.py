@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from prompts import build_curriculum_context
+from prompts import build_curriculum_context, course_label
 from services.auth import get_current_uid, require_same_user
 from services.firebase_service import (
     get_document, set_document, query_collection
@@ -35,6 +35,12 @@ def fetch_curriculum_context(topic_id: str) -> tuple:
 
     subtopics = [sub["title"] for sub in doc.get("subtopics", [])]
     return build_curriculum_context(doc), subtopics
+
+
+def fetch_course_label(topic: dict) -> str:
+    """How prompts name the topic's course, from the course document."""
+    course_id = topic.get("course_id")
+    return course_label(get_document("courses", course_id) if course_id else None)
 
 
 def save_lesson(user_id: str, topic_id: str, lesson_data: dict, is_remedial: bool):
@@ -103,6 +109,7 @@ def fetch_lesson(req: LessonRequest, uid: str = Depends(get_current_uid)):
         subtopics          = subtopics,
         curriculum_context = curriculum_context,
         is_remedial        = False,
+        course             = fetch_course_label(topic),
     )
 
     # Save lesson for this user
@@ -155,6 +162,7 @@ def fetch_remedial_lesson(req: RemedialLessonRequest, uid: str = Depends(get_cur
         curriculum_context = curriculum_context,
         is_remedial        = True,
         weak_subtopics     = req.weak_subtopics,
+        course             = fetch_course_label(topic),
     )
 
     # Save remedial lesson

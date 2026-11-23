@@ -93,7 +93,7 @@ tests/                   pytest suite (no network; Firestore and OpenAI are fake
 | Collection | Written by | What each document stores |
 |---|---|---|
 | `users` | client; this API updates it | Profile and onboarding answers, `login_streak`, `longest_streak`, `last_login_date` |
-| `courses` | seed scripts | Course title, code, faculty, year level |
+| `courses` | seed scripts | Course title, code, faculty, year level, and optionally `language` (the programming language, e.g. `C++`). Lesson, quiz and grading prompts name the course by its title, followed by the language in brackets when it is set. |
 | `topics` | seed scripts | Title, `course_id`, `order_index`, `prerequisite_topic_id` |
 | `curriculum_guides` | seed scripts | Per topic (document ID = topic ID): subtopics with their curriculum text (`key_content`) |
 | `question_bank` | seed scripts and `/quiz/generate-personalized` | Question, type, options, correct answer, explanation, subtopic, difficulty, usage counts, `source` |
@@ -224,7 +224,6 @@ Every rating was 4 or 5. With scores this close to the maximum, the test cannot 
 - Personalised questions are saved to the shared `question_bank` with no owner, so `/quiz/fetch` can later serve one student's remedial questions to other students. (Chukky's system prompt tells students the opposite.)
 - If typed-answer grading fails partway through a submission, earlier answers' usage counts in `question_bank` have already been updated.
 - There is no per-user limit on the endpoints that call the model.
-- Some prompt wording assumes the course is Java (for example the lesson and grading prompts), although CSC301 is taught in C++.
 - `previous_question_ids` in the personalised-quiz request is accepted but not used.
 - Only direct dependencies are pinned; transitive versions can change between installs.
 

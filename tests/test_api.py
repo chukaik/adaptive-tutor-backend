@@ -194,6 +194,8 @@ def test_typed_answers_are_graded_by_the_model(client, course, openai):
     assert body["results"][0]["ai_reasoning"] == "Same meaning."
     assert body["score"] == 50.0
     assert "Student's Answer: first in first out" in openai.requests[1]["messages"][-1]["content"]
+    # The course is named from the course document
+    assert "an undergraduate Data Structures student" in openai.requests[1]["messages"][-1]["content"]
 
 
 # ── Failing: weak subtopics come back, remedial lesson and quiz use them ─────
@@ -232,6 +234,8 @@ def test_failing_returns_weak_subtopics_and_keeps_topic_locked(client, course, o
     prompt = openai.requests[-1]["messages"][-1]["content"]
     assert f"SUBTOPICS TO COVER:\n- {QUEUES}\n" in prompt
     assert "FIFO, enqueue, dequeue" in prompt
+    assert "You are an expert Data Structures programming lecturer" in prompt
+    assert "Java" not in prompt
     assert course.doc("user_lessons", f"alice_{T1}_remedial")["is_remedial"] is True
 
     # Personalised quiz targets the weak subtopic and is saved to the bank
@@ -247,6 +251,7 @@ def test_failing_returns_weak_subtopics_and_keeps_topic_locked(client, course, o
     saved = course.doc("question_bank", new_q["question_id"])
     assert saved["source"] == "ai_generated" and saved["correct_answer"] == "A. Front"
     assert f"- {QUEUES}" in openai.requests[-1]["messages"][-1]["content"]
+    assert "in a Data Structures programming course" in openai.requests[-1]["messages"][-1]["content"]
 
 
 def test_failing_keeps_best_score(client, course):

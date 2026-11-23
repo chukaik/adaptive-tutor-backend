@@ -13,7 +13,7 @@ from services.openai_service import (
     get_hint, get_explanation, grade_typed_answer,
     generate_personalized_questions
 )
-from prompts import build_curriculum_context
+from prompts import build_curriculum_context, course_label
 from services.adaptive_engine import evaluate, compute_score
 from services.auth import get_current_uid, require_same_user
 from firebase_admin import firestore
@@ -26,6 +26,12 @@ router = APIRouter()
 
 def fetch_curriculum_context(topic_id: str) -> str:
     return build_curriculum_context(get_document("curriculum_guides", topic_id))
+
+
+def fetch_course_label(topic: dict) -> str:
+    """How prompts name the topic's course, from the course document."""
+    course_id = topic.get("course_id")
+    return course_label(get_document("courses", course_id) if course_id else None)
 
 
 # QUIZ FETCH
@@ -177,6 +183,8 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
             )
         question_docs[question_id] = question_doc
 
+    course = fetch_course_label(topic)
+
     # Grade every question in the session; an unanswered question is wrong
     results          = []
     correct_count    = 0
@@ -210,6 +218,7 @@ def submit_quiz(req: QuizSubmitRequest, uid: str = Depends(get_current_uid)):
                 question_text  = question_text,
                 correct_answer = correct_answer,
                 student_answer = student_answer,
+                course         = course,
             )
             is_correct   = grading_result.get("is_correct", False)
             ai_reasoning = grading_result.get("reasoning", "")
@@ -398,6 +407,7 @@ def generate_personalized_quiz(req: PersonalizedQuizRequest, uid: str = Depends(
         curriculum_context     = curriculum_context,
         previous_question_ids  = req.previous_question_ids,
         count                  = 10,
+        course                 = fetch_course_label(topic),
     )
 
     # Save generated questions to question_bank

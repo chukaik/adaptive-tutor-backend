@@ -3,6 +3,7 @@ from prompts import (
     SYSTEM_PROMPT,
     build_curriculum_context,
     chat_messages,
+    course_label,
     explanation_messages,
     grading_messages,
     hint_messages,
@@ -10,6 +11,7 @@ from prompts import (
     personalized_quiz_messages,
 )
 
+COURSE = "Data Structures (C++)"
 CONTEXT = "Topic: Trees\n\nSubtopic: Binary Search Trees\nLeft < root < right."
 
 
@@ -52,6 +54,7 @@ def test_quiz_prompt_includes_context_weak_subtopics_and_count():
         difficulty="hard",
         curriculum_context=CONTEXT,
         count=7,
+        course=COURSE,
     )
     text = user_text(messages)
     assert CONTEXT in text
@@ -63,21 +66,21 @@ def test_quiz_prompt_includes_context_weak_subtopics_and_count():
 
 
 def test_quiz_prompt_easy_guidance():
-    text = user_text(personalized_quiz_messages("T", ["S"], "easy", CONTEXT))
+    text = user_text(personalized_quiz_messages("T", ["S"], "easy", CONTEXT, course=COURSE))
     assert "DIFFICULTY: EASY" in text
     assert "basic recall and definitions" in text
     assert "Generate exactly 10 questions" in text  # default count
 
 
 def test_quiz_prompt_has_no_system_message():
-    messages = personalized_quiz_messages("T", ["S"], "easy", CONTEXT)
+    messages = personalized_quiz_messages("T", ["S"], "easy", CONTEXT, course=COURSE)
     assert [m["role"] for m in messages] == ["user"]
 
 
 # ── Lesson ───────────────────────────────────────────────────────────────────
 
 def test_initial_lesson_covers_all_subtopics_with_context():
-    messages = lesson_messages("Trees", ["BST", "Traversal"], CONTEXT)
+    messages = lesson_messages("Trees", ["BST", "Traversal"], CONTEXT, course=COURSE)
     assert messages[0] == {"role": "system", "content": SYSTEM_PROMPT}
     text = user_text(messages)
     assert CONTEXT in text
@@ -90,7 +93,7 @@ def test_initial_lesson_covers_all_subtopics_with_context():
 def test_remedial_lesson_covers_only_weak_subtopics():
     text = user_text(lesson_messages(
         "Trees", ["BST", "Traversal", "Heaps"], CONTEXT,
-        is_remedial=True, weak_subtopics=["Traversal"],
+        is_remedial=True, weak_subtopics=["Traversal"], course=COURSE,
     ))
     assert "REMEDIAL lesson" in text
     assert "SUBTOPICS TO COVER:\n- Traversal\n" in text
@@ -100,7 +103,7 @@ def test_remedial_lesson_covers_only_weak_subtopics():
 
 
 def test_remedial_without_weak_subtopics_falls_back_to_all():
-    text = user_text(lesson_messages("T", ["A", "B"], CONTEXT, is_remedial=True, weak_subtopics=[]))
+    text = user_text(lesson_messages("T", ["A", "B"], CONTEXT, is_remedial=True, weak_subtopics=[], course=COURSE))
     assert "SUBTOPICS TO COVER:\n- A\n- B\n" in text
     assert "first-time lesson" in text
 
@@ -116,8 +119,8 @@ def test_hint_includes_question_topic_and_difficulty():
 
 
 def test_explanation_reflects_correctness():
-    right = user_text(explanation_messages("Q", "LIFO", "LIFO", True, "Stacks"))
-    wrong = user_text(explanation_messages("Q", "LIFO", "FIFO", False, "Stacks"))
+    right = user_text(explanation_messages("Q", "LIFO", "LIFO", True, "Stacks", course=COURSE))
+    wrong = user_text(explanation_messages("Q", "LIFO", "FIFO", False, "Stacks", course=COURSE))
     assert "correctly" in right and "incorrectly" not in right
     assert "incorrectly" in wrong
     assert "Correct Answer: LIFO" in wrong
@@ -126,7 +129,8 @@ def test_explanation_reflects_correctness():
 
 
 def test_grading_includes_expected_and_student_answer():
-    messages = grading_messages("Define a queue.", "FIFO structure", "first in first out")
+    messages = grading_messages("Define a queue.", "FIFO structure", "first in first out",
+                                course=COURSE)
     assert [m["role"] for m in messages] == ["user"]
     text = user_text(messages)
     assert "Expected Answer: FIFO structure" in text
@@ -151,3 +155,30 @@ def test_chat_without_topic_uses_plain_system_prompt():
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": "hi"},
     ]
+
+
+# ── Course name ──────────────────────────────────────────────────────────────
+
+def test_course_label_uses_title_and_optional_language():
+    assert course_label({"title": "Data Structures", "language": "C++"}) == "Data Structures (C++)"
+    assert course_label({"title": "Data Structures"}) == "Data Structures"
+    assert course_label({"title": "Data Structures", "language": ""}) == "Data Structures"
+    assert course_label(None) == "Computer Science"
+    assert course_label({}) == "Computer Science"
+
+
+def test_prompts_name_the_course_and_never_assume_java():
+    texts = [
+        user_text(explanation_messages("Q", "A", "B", False, "Stacks", course=COURSE)),
+        user_text(grading_messages("Q", "A", "B", course=COURSE)),
+        user_text(personalized_quiz_messages("T", ["S"], "easy", CONTEXT, course=COURSE)),
+        user_text(lesson_messages("T", ["A"], CONTEXT, course=COURSE)),
+    ]
+    assert "this Data Structures (C++) question" in texts[0]
+    assert "an undergraduate Data Structures (C++) student" in texts[1]
+    assert "in a Data Structures (C++) programming course" in texts[2]
+    assert "You are an expert Data Structures (C++) programming lecturer" in texts[3]
+    assert "real Data Structures (C++) development" in texts[3]
+    assert "the actual Data Structures (C++) code" in texts[3]
+    assert "second Data Structures (C++) code example" in texts[3]
+    assert not any("Java" in t for t in texts)
