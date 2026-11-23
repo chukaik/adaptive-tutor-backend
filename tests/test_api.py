@@ -355,6 +355,17 @@ def test_unusable_model_reply_is_502(client, course, openai):
 
 # ── Grading against the quiz session ─────────────────────────────────────────
 
+def answer(question, student_answer=CORRECT, question_type=None):
+    return {"question_id": question["question_id"],
+            "question_type": question_type or question["question_type"],
+            "student_answer": student_answer}
+
+
+def assert_nothing_recorded(db, session_id):
+    assert db.doc("quiz_sessions", session_id)["answers_submitted"] == []
+    assert db.doc("student_progress", f"alice_{T1}")["attempts"] == 0
+
+
 def test_submitting_a_subset_of_questions_does_not_pass(client, course):
     onboard(client)
     easy = fetch(client, "easy").json()
@@ -365,8 +376,98 @@ def test_submitting_a_subset_of_questions_does_not_pass(client, course):
     assert r.json()["passed"] is False
 
 
+def test_unanswered_questions_count_as_wrong(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    first = easy["questions"][0]
+    body = submit(client, easy, "easy", answers=[answer(first)]).json()
+    assert body["total_questions"] == 10
+    assert body["correct_count"] == 1
+    assert body["score"] == 10.0
+    assert len(body["results"]) == 10
+    unanswered = [r for r in body["results"] if r["question_id"] != first["question_id"]]
+    assert all(r["student_answer"] == "" and not r["is_correct"] for r in unanswered)
+    stored = course.doc("quiz_sessions", easy["session_id"])["answers_submitted"]
+    assert [a["question_id"] for a in stored] == [q["question_id"] for q in easy["questions"]]
+
+
 def test_easy_session_submitted_as_hard_does_not_unlock_next_topic(client, course):
     onboard(client)
     easy = fetch(client, "easy").json()
     r = submit(client, easy, "hard")
     assert r.status_code in (400, 403) or r.json()["next_action"] != "UNLOCK_NEXT_TOPIC"
+
+
+def test_difficulty_that_disagrees_with_session_is_400(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    r = submit(client, easy, "hard")
+    assert r.status_code == 400
+    assert "difficulty" in r.json()["detail"]
+    assert_nothing_recorded(course, easy["session_id"])
+
+
+def test_topic_that_disagrees_with_session_is_400(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    r = submit(client, {**easy, "topic_id": T2}, "easy")
+    assert r.status_code == 400
+    assert "topic_id" in r.json()["detail"]
+    assert_nothing_recorded(course, easy["session_id"])
+
+
+def test_answer_for_question_not_in_session_is_400(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    in_session = {q["question_id"] for q in easy["questions"]}
+    outsider = next(f"hard{i}" for i in range(10) if f"hard{i}" not in in_session)
+    answers = [answer(q) for q in easy["questions"]]
+    answers[0]["question_id"] = outsider
+    r = submit(client, easy, "easy", answers=answers)
+    assert r.status_code == 400
+    assert outsider in r.json()["detail"]
+    assert_nothing_recorded(course, easy["session_id"])
+
+
+def test_duplicate_answer_is_400(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    first = easy["questions"][0]
+    r = submit(client, easy, "easy",
+               answers=[answer(first), answer(first, "B. Wrong")])
+    assert r.status_code == 400
+    assert "more than once" in r.json()["detail"]
+    assert_nothing_recorded(course, easy["session_id"])
+
+
+def test_session_without_questions_is_400(client, course):
+    onboard(client)
+    session_id = course.collection("quiz_sessions").add({
+        "user_id": "alice", "topic_id": T1, "difficulty": "easy",
+        "questions": [], "answers_submitted": []})[1].id
+    r = submit(client, {"session_id": session_id, "topic_id": T1, "questions": []}, "easy")
+    assert r.status_code == 400
+
+
+def test_submitting_a_session_twice_is_409(client, course):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    assert submit(client, easy, "easy").status_code == 200
+    first = course.doc("quiz_sessions", easy["session_id"])["answers_submitted"]
+    wrong = {q["question_id"] for q in easy["questions"]}
+    r = submit(client, easy, "easy", wrong=wrong)
+    assert r.status_code == 409
+    assert course.doc("quiz_sessions", easy["session_id"])["answers_submitted"] == first
+    assert course.doc("student_progress", f"alice_{T1}")["attempts"] == 1
+
+
+def test_question_type_comes_from_the_question_bank(client, course, openai):
+    onboard(client)
+    easy = fetch(client, "easy").json()
+    # Every stored question is multiple choice; claiming "typed" must not
+    # send the answer to the model for lenient grading.
+    answers = [answer(q, "a. right", question_type="typed") for q in easy["questions"]]
+    body = submit(client, easy, "easy", answers=answers).json()
+    assert body["score"] == 100.0
+    assert {r["question_type"] for r in body["results"]} == {"multiple_choice"}
+    assert openai.requests == []
