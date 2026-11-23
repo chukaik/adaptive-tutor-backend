@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from models.schemas import ChatRequest, ChatResponse
+from services.auth import get_current_uid, require_same_user
 from services.firebase_service import get_document
 from services.openai_service import chat_with_tutor
 from firebase_admin import firestore
@@ -80,7 +81,8 @@ def update_session_metadata(
 # ─── POST /chat/message ───────────────────────────────────────────────────────
 
 @router.post("/message", response_model=ChatResponse)
-def send_message(req: ChatRequest):
+def send_message(req: ChatRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
 
     # Verify user exists
     user = get_document("users", req.user_id)
@@ -167,7 +169,13 @@ def send_message(req: ChatRequest):
 # ─── GET /chat/history/{user_id} ─────────────────────────────────────────────
 
 @router.get("/history/{user_id}")
-def get_chat_history(user_id: str, session_id: str = None, limit: int = 50):
+def get_chat_history(
+    user_id: str,
+    session_id: str = None,
+    limit: int = 50,
+    uid: str = Depends(get_current_uid),
+):
+    require_same_user(user_id, uid)
 
     # Verify user exists
     user = get_document("users", user_id)
@@ -215,7 +223,8 @@ def get_chat_history(user_id: str, session_id: str = None, limit: int = 50):
 # ─── GET /chat/sessions/{user_id} ────────────────────────────────────────────
 
 @router.get("/sessions/{user_id}")
-def get_chat_sessions(user_id: str):
+def get_chat_sessions(user_id: str, uid: str = Depends(get_current_uid)):
+    require_same_user(user_id, uid)
 
     user = get_document("users", user_id)
     if not user:
@@ -248,7 +257,8 @@ def get_chat_sessions(user_id: str):
 # ─── POST /chat/sessions/{user_id} ───────────────────────────────────────────
 
 @router.post("/sessions/{user_id}")
-def create_chat_session(user_id: str):
+def create_chat_session(user_id: str, uid: str = Depends(get_current_uid)):
+    require_same_user(user_id, uid)
 
     user = get_document("users", user_id)
     if not user:

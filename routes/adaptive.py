@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from services.auth import get_current_uid, require_same_user
 from services.firebase_service import get_document, set_document, query_collection
 from firebase_admin import firestore
 
@@ -12,7 +13,8 @@ class InitCourseRequest(BaseModel):
 
 
 @router.post("/init-course")
-def init_course_progress(req: InitCourseRequest):
+def init_course_progress(req: InitCourseRequest, uid: str = Depends(get_current_uid)):
+    require_same_user(req.user_id, uid)
     user = get_document("users", req.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
