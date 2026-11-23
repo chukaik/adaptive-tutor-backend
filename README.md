@@ -240,4 +240,6 @@ This project was supervised by Mr Jeremiah Balogun, Department of Computer Scien
 
 Curriculum guides combine the COS201 lecture notes with CCMAS course descriptions (CSC301 uses CCMAS descriptions only). Lessons, questions and chat replies are generated with OpenAI models.
 
-> TODO (author): add any other acknowledgements, and confirm you have permission to publish `seed/COS201.pdf` and the lecture-note text in `seed/curriculum_extracted.json`.
+The Department of Computer Science, Adeleke University, gave permission to publish the COS201 lecture notes in this repository (`seed/COS201.pdf` and the lecture-note text in `seed/curriculum_extracted.json`).
+
+> TODO (author): add any other acknowledgements.
